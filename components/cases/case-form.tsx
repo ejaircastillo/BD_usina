@@ -14,6 +14,84 @@ import { FollowUpForm } from "./forms/follow-up-form"
 import { ResourcesForm } from "./forms/resources-form"
 import { useToast } from "@/hooks/use-toast"
 
+// Interfaces para tipado
+interface VictimData {
+  name?: string
+  surname?: string
+  birthDate?: string
+  age?: string
+  profession?: string
+  phone?: string
+  email?: string
+  address?: string
+  gender?: string
+  maritalStatus?: string
+  notes?: string
+}
+
+interface IncidentData {
+  date?: string
+  time?: string
+  province?: string
+  city?: string
+  location?: string
+  summary?: string
+  type?: string
+  modality?: string
+  circumstances?: string
+  witnesses?: string
+  evidence?: string
+  previousReport?: boolean
+  legalCase?: string
+  prosecutor?: string
+  court?: string
+  status?: string
+  notes?: string
+}
+
+interface AccusedData {
+  id: number
+  name?: string
+  alias?: string
+  age?: string
+  description?: string
+  status?: string
+  charges?: string
+}
+
+interface FollowUpData {
+  assignedMember?: string
+  assignedPhone?: string
+  assignedEmail?: string
+  assignmentDate?: string
+  familyContact?: string
+  familyPhone?: string
+  familyEmail?: string
+  familyAddress?: string
+  notes?: string
+  nextActions?: string
+}
+
+interface ResourceData {
+  id: number
+  type?: string
+  title?: string
+  url?: string
+  source?: string
+  date?: string
+  description?: string
+}
+
+interface FormData {
+  victim: VictimData
+  incident: IncidentData
+  accused: AccusedData[]
+  followUp: FollowUpData
+  resources: ResourceData[]
+  internalId?: string
+  expedientNumber?: string
+}
+
 interface CaseFormProps {
   mode: "create" | "edit"
   caseId?: string
@@ -24,18 +102,20 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("victim")
   const [isSaving, setIsSaving] = useState(false)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     victim: {},
     incident: {},
     accused: [],
     followUp: {},
     resources: [],
+    internalId: '',
+    expedientNumber: ''
   })
 
-    const handleSave = async () => {
+  const handleSave = async () => {
     if (!formData) return
 
-    setIsLoading(true)
+    setIsSaving(true)
     let createdVictimaId = null
     let createdHechoId = null
 
@@ -47,7 +127,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           description: 'El nombre de la víctima es requerido',
           variant: 'destructive'
         })
-        setIsLoading(false)
+        setIsSaving(false)
         return
       }
 
@@ -57,7 +137,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           description: 'La fecha del hecho es requerida',
           variant: 'destructive'
         })
-        setIsLoading(false)
+        setIsSaving(false)
         return
       }
 
@@ -183,11 +263,11 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         variant: 'destructive'
       })
     } finally {
-      setIsLoading(false)
+      setIsSaving(false)
     }
   }
 
-  const updateFormData = (section: string, data: any) => {
+  const updateFormData = (section: keyof FormData, data: any) => {
     setFormData((prev) => ({
       ...prev,
       [section]: data,
