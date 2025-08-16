@@ -6,112 +6,222 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, User } from "lucide-react"
 import { useEffect, useState } from "react"
 
+const mockCases = [
+  {
+    id: "1",
+    victimName: "María Elena Rodríguez",
+    incidentDate: "2024-03-15",
+    location: "La Plata, Buenos Aires",
+    province: "Buenos Aires",
+    status: "En investigación",
+    assignedMember: "Dr. María González",
+  },
+  {
+    id: "2",
+    victimName: "Carlos Alberto Fernández",
+    incidentDate: "2024-02-28",
+    location: "Rosario, Santa Fe",
+    province: "Santa Fe",
+    status: "Procesado",
+    assignedMember: "Dr. Carlos Rodríguez",
+  },
+  {
+    id: "3",
+    victimName: "Ana Sofía Martínez",
+    incidentDate: "2024-01-20",
+    location: "Córdoba Capital",
+    province: "Córdoba",
+    status: "Juicio oral",
+    assignedMember: "Dra. Ana Martínez",
+  },
+  {
+    id: "4",
+    victimName: "Roberto Luis García",
+    incidentDate: "2023-12-10",
+    location: "Mendoza Capital",
+    province: "Mendoza",
+    status: "Condenado",
+    assignedMember: "Dr. Luis Fernández",
+  },
+  {
+    id: "5",
+    victimName: "Laura Patricia López",
+    incidentDate: "2023-11-05",
+    location: "Tucumán Capital",
+    province: "Tucumán",
+    status: "En investigación",
+    assignedMember: "Dra. Carmen López",
+  },
+  {
+    id: "6",
+    victimName: "Diego Alejandro Morales",
+    incidentDate: "2023-10-18",
+    location: "Salta Capital",
+    province: "Salta",
+    status: "Imputado identificado",
+    assignedMember: "Dr. María González",
+  },
+  {
+    id: "7",
+    victimName: "Carmen Rosa Jiménez",
+    incidentDate: "2024-04-02",
+    location: "Mar del Plata, Buenos Aires",
+    province: "Buenos Aires",
+    status: "Procesado",
+    assignedMember: "Dr. Carlos Rodríguez",
+  },
+  {
+    id: "8",
+    victimName: "José Miguel Torres",
+    incidentDate: "2024-01-15",
+    location: "Santa Fe Capital",
+    province: "Santa Fe",
+    status: "Archivo",
+    assignedMember: "Dra. Ana Martínez",
+  },
+  {
+    id: "9",
+    victimName: "Silvia Beatriz Herrera",
+    incidentDate: "2023-09-22",
+    location: "Villa Carlos Paz, Córdoba",
+    province: "Córdoba",
+    status: "Sobreseído",
+    assignedMember: "Dr. Luis Fernández",
+  },
+  {
+    id: "10",
+    victimName: "Fernando Daniel Castro",
+    incidentDate: "2024-05-10",
+    location: "San Miguel de Tucumán",
+    province: "Tucumán",
+    status: "En investigación",
+    assignedMember: "Dra. Carmen López",
+  },
+  {
+    id: "11",
+    victimName: "Patricia Mónica Vega",
+    incidentDate: "2024-06-12",
+    location: "Neuquén Capital",
+    province: "Neuquén",
+    status: "Procesado",
+    assignedMember: "Dr. Miguel Herrera",
+  },
+  {
+    id: "12",
+    victimName: "Andrés Felipe Ruiz",
+    incidentDate: "2024-07-08",
+    location: "Posadas, Misiones",
+    province: "Misiones",
+    status: "En investigación",
+    assignedMember: "Dra. Elena Castro",
+  },
+]
+
 const getStatusColor = (status: string) => {
   switch (status) {
     case "En investigación":
       return "bg-yellow-100 text-yellow-800 border-yellow-200"
-    case "Procesado":
+    case "Imputado identificado":
       return "bg-blue-100 text-blue-800 border-blue-200"
-    case "Resuelto":
-      return "bg-green-100 text-green-800 border-green-200"
-    case "Archivado":
-      return "bg-red-100 text-red-800 border-red-200"
-    case "Iniciado":
+    case "Procesado":
       return "bg-orange-100 text-orange-800 border-orange-200"
+    case "Juicio oral":
+      return "bg-purple-100 text-purple-800 border-purple-200"
+    case "Condenado":
+      return "bg-green-100 text-green-800 border-green-200"
+    case "Absuelto":
+      return "bg-gray-100 text-gray-800 border-gray-200"
+    case "Sobreseído":
+      return "bg-slate-100 text-slate-800 border-slate-200"
+    case "Archivo":
+      return "bg-red-100 text-red-800 border-red-200"
     default:
       return "bg-gray-100 text-gray-800 border-gray-200"
   }
 }
 
-function ScrollingRow({ cases, direction, speed }: { cases: any[], direction: "left" | "right", speed: number }) {
+interface CaseCardProps {
+  case: (typeof mockCases)[0]
+}
+
+function CaseCard({ case: caseData }: CaseCardProps) {
   return (
-    <div className="overflow-hidden relative">
+    <Link href={`/casos/${caseData.id}`}>
+      <Card className="w-80 flex-shrink-0 hover:shadow-lg transition-all duration-300 border-slate-200 hover:border-blue-300 cursor-pointer hover:scale-105">
+        <CardContent className="p-6">
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-semibold text-lg text-slate-900 font-heading mb-2 line-clamp-2">
+                {caseData.victimName}
+              </h3>
+              <Badge className={`text-xs ${getStatusColor(caseData.status)}`}>{caseData.status}</Badge>
+            </div>
+
+            <div className="space-y-2 text-sm text-slate-600">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-600" />
+                <span>{new Date(caseData.incidentDate).toLocaleDateString("es-AR")}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-blue-600" />
+                <span className="line-clamp-1">{caseData.location}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-blue-600" />
+                <span className="line-clamp-1">{caseData.assignedMember}</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  )
+}
+
+interface ScrollingRowProps {
+  cases: typeof mockCases
+  direction: "left" | "right"
+  speed: number
+}
+
+function ScrollingRow({ cases, direction, speed }: ScrollingRowProps) {
+  const [duplicatedCases, setDuplicatedCases] = useState<typeof mockCases>([])
+
+  useEffect(() => {
+    // Duplicate cases to create seamless loop
+    setDuplicatedCases([...cases, ...cases, ...cases])
+  }, [cases])
+
+  return (
+    <div className="relative overflow-hidden">
       <div
-        className={`flex gap-6 whitespace-nowrap ${
-          direction === "left" ? "animate-scroll-left" : "animate-scroll-right"
-        }`}
+        className={`flex gap-6 ${direction === "left" ? "animate-scroll-left" : "animate-scroll-right"}`}
         style={{
           animationDuration: `${speed}s`,
-          width: "fit-content"
         }}
       >
-        {/* Duplicate the items for seamless scrolling */}
-        {[...cases, ...cases].map((case_, index) => (
-          <Link key={`${case_.id}-${index}`} href={`/casos/${case_.id}`}>
-            <Card className="w-80 flex-none hover:shadow-lg transition-shadow duration-200 border-slate-200 hover:border-slate-300 cursor-pointer">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-semibold text-lg text-slate-900 font-heading mb-2 line-clamp-2">
-                      {case_.id_interno || `Caso ${case_.id.slice(0, 8)}`}
-                    </h3>
-                    <Badge className={`text-xs ${getStatusColor(case_.estado)}`}>
-                      {case_.estado || 'Sin estado'}
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-2 text-sm text-slate-600">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-slate-400" />
-                      <span>
-                        {case_.created_at 
-                          ? new Date(case_.created_at).toLocaleDateString("es-AR") 
-                          : 'Sin fecha'
-                        }
-                      </span>
-                    </div>
-
-                    {case_.numero_expediente && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-slate-400" />
-                        <span className="line-clamp-1">Exp. {case_.numero_expediente}</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-slate-400" />
-                      <span className="line-clamp-1">
-                        ID: {case_.id.slice(0, 8)}...
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+        {duplicatedCases.map((caseData, index) => (
+          <CaseCard key={`${caseData.id}-${index}`} case={caseData} />
         ))}
       </div>
     </div>
   )
 }
 
-interface AnimatedCasesGridProps {
-  cases?: any[]
-}
-
-export function AnimatedCasesGrid({ cases = [] }: AnimatedCasesGridProps) {
-  const [rows, setRows] = useState<any[][]>([])
+export function AnimatedCasesGrid() {
+  const [rows, setRows] = useState<(typeof mockCases)[]>([])
 
   useEffect(() => {
-    if (cases.length > 0) {
-      // Split cases into multiple rows
-      const chunkSize = 4
-      const caseRows = []
-      for (let i = 0; i < cases.length; i += chunkSize) {
-        caseRows.push(cases.slice(i, i + chunkSize))
-      }
-      setRows(caseRows)
+    // Split cases into multiple rows
+    const chunkSize = 4
+    const caseRows = []
+    for (let i = 0; i < mockCases.length; i += chunkSize) {
+      caseRows.push(mockCases.slice(i, i + chunkSize))
     }
-  }, [cases])
-
-  if (cases.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <h3 className="text-lg font-medium text-slate-900 mb-2">No hay casos para mostrar</h3>
-        <p className="text-slate-600">Los casos aparecerán aquí una vez que sean cargados.</p>
-      </div>
-    )
-  }
+    setRows(caseRows)
+  }, [])
 
   return (
     <div className="space-y-8 py-8">

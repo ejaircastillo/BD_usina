@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Header } from "@/components/layout/header"
 import { CasesGrid } from "@/components/cases/cases-grid"
 import { CasesFilters } from "@/components/cases/cases-filters"
@@ -13,82 +13,15 @@ export default function HomePage() {
   const [filters, setFilters] = useState({
     dateFrom: "",
     dateTo: "",
+    province: "",
+    location: "",
     status: "",
+    assignedMember: "",
     searchTerm: "",
   })
 
   const [showFilters, setShowFilters] = useState(false)
   const [viewMode, setViewMode] = useState<"animated" | "grid">("animated")
-  const [cases, setCases] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  // Función para construir la URL con parámetros de consulta
-  const buildApiUrl = (currentFilters: {
-    dateFrom: string
-    dateTo: string
-    status: string
-    searchTerm: string
-  }) => {
-    const params = new URLSearchParams()
-    
-    Object.entries(currentFilters).forEach(([key, value]) => {
-      if (value && typeof value === 'string' && value.trim() !== '') {
-        params.append(key, value)
-      }
-    })
-    
-    const queryString = params.toString()
-    return `/api/casos${queryString ? `?${queryString}` : ''}`
-  }
-
-  // Función para obtener los casos de la API
-  const fetchCases = async (currentFilters: {
-    dateFrom: string
-    dateTo: string
-    status: string
-    searchTerm: string
-  } = filters) => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const url = buildApiUrl(currentFilters)
-      const response = await fetch(url)
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`)
-      }
-      
-      const data = await response.json()
-      setCases(data.casos || [])
-    } catch (err) {
-      console.error('Error fetching cases:', err)
-      setError(err instanceof Error ? err.message : 'Error al cargar los casos')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Cargar casos al montar el componente
-  useEffect(() => {
-    fetchCases()
-  }, [])
-
-  // Actualizar casos cuando cambien los filtros
-  useEffect(() => {
-    fetchCases(filters)
-  }, [filters])
-
-  // Manejar cambios en los filtros
-  const handleFiltersChange = (newFilters: {
-    dateFrom: string
-    dateTo: string
-    status: string
-    searchTerm: string
-  }) => {
-    setFilters(newFilters)
-  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -145,49 +78,18 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Mostrar estado de carga */}
-        {loading && (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-slate-600">Cargando casos...</p>
+        {viewMode === "animated" ? (
+          <div className="scrolling-container">
+            <AnimatedCasesGrid />
           </div>
-        )}
-
-        {/* Mostrar error si existe */}
-        {error && (
-          <div className="text-center py-8 mb-8">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto">
-              <p className="text-red-800 font-medium">Error al cargar los casos</p>
-              <p className="text-red-600 text-sm mt-1">{error}</p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => fetchCases()} 
-                className="mt-3"
-              >
-                Reintentar
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Mostrar contenido solo si no hay error ni carga */}
-        {!loading && !error && (
+        ) : (
           <>
-            {viewMode === "animated" ? (
-              <div className="scrolling-container">
-                <AnimatedCasesGrid cases={cases} />
+            {showFilters && (
+              <div className="mb-8">
+                <CasesFilters onFiltersChange={setFilters} />
               </div>
-            ) : (
-              <>
-                {showFilters && (
-                  <div className="mb-8">
-                    <CasesFilters onFiltersChange={handleFiltersChange} />
-                  </div>
-                )}
-                <CasesGrid cases={cases} filters={filters} />
-              </>
             )}
+            <CasesGrid filters={filters} />
           </>
         )}
       </main>
