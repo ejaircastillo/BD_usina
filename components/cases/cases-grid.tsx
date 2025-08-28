@@ -13,7 +13,8 @@ const mockCases = [
     location: "La Plata, Buenos Aires",
     province: "Buenos Aires",
     status: "En investigación",
-    assignedMember: "Dr. María González",
+    familyContactName: "Juan Carlos Rodríguez",
+    familyRelationship: "Padre",
   },
   {
     id: "2",
@@ -22,7 +23,8 @@ const mockCases = [
     location: "Rosario, Santa Fe",
     province: "Santa Fe",
     status: "Procesado",
-    assignedMember: "Dr. Carlos Rodríguez",
+    familyContactName: "Elena Fernández",
+    familyRelationship: "Madre",
   },
   {
     id: "3",
@@ -31,7 +33,8 @@ const mockCases = [
     location: "Córdoba Capital",
     province: "Córdoba",
     status: "Juicio oral",
-    assignedMember: "Dra. Ana Martínez",
+    familyContactName: "Roberto Martínez",
+    familyRelationship: "Hermano",
   },
   {
     id: "4",
@@ -40,7 +43,8 @@ const mockCases = [
     location: "Mendoza Capital",
     province: "Mendoza",
     status: "Condenado",
-    assignedMember: "Dr. Luis Fernández",
+    familyContactName: "Carmen García",
+    familyRelationship: "Esposa",
   },
   {
     id: "5",
@@ -49,7 +53,8 @@ const mockCases = [
     location: "Tucumán Capital",
     province: "Tucumán",
     status: "En investigación",
-    assignedMember: "Dra. Carmen López",
+    familyContactName: "Miguel López",
+    familyRelationship: "Padre",
   },
   {
     id: "6",
@@ -58,7 +63,8 @@ const mockCases = [
     location: "Salta Capital",
     province: "Salta",
     status: "Imputado identificado",
-    assignedMember: "Dr. María González",
+    familyContactName: "Ana Morales",
+    familyRelationship: "Madre",
   },
   {
     id: "7",
@@ -67,7 +73,8 @@ const mockCases = [
     location: "Mar del Plata, Buenos Aires",
     province: "Buenos Aires",
     status: "Procesado",
-    assignedMember: "Dr. Carlos Rodríguez",
+    familyContactName: "Luis Jiménez",
+    familyRelationship: "Hijo",
   },
   {
     id: "8",
@@ -76,7 +83,8 @@ const mockCases = [
     location: "Santa Fe Capital",
     province: "Santa Fe",
     status: "Archivo",
-    assignedMember: "Dra. Ana Martínez",
+    familyContactName: "María Torres",
+    familyRelationship: "Hija",
   },
   {
     id: "9",
@@ -85,7 +93,8 @@ const mockCases = [
     location: "Villa Carlos Paz, Córdoba",
     province: "Córdoba",
     status: "Sobreseído",
-    assignedMember: "Dr. Luis Fernández",
+    familyContactName: "Pedro Herrera",
+    familyRelationship: "Esposo",
   },
   {
     id: "10",
@@ -94,7 +103,8 @@ const mockCases = [
     location: "San Miguel de Tucumán",
     province: "Tucumán",
     status: "En investigación",
-    assignedMember: "Dra. Carmen López",
+    familyContactName: "Rosa Castro",
+    familyRelationship: "Madre",
   },
 ]
 
@@ -128,7 +138,7 @@ interface CasesGridProps {
     province?: string
     location?: string
     status?: string
-    assignedMember?: string
+    familyContact?: string
     searchTerm?: string
   }
 }
@@ -163,8 +173,13 @@ export function CasesGrid({ filters = {} }: CasesGridProps) {
       return false
     }
 
-    // Assigned member filter
-    if (filters.assignedMember && case_.assignedMember !== filters.assignedMember) {
+    // Family contact filter
+    if (
+      filters.familyContact &&
+      !`${case_.familyContactName} - ${case_.familyRelationship}`
+        .toLowerCase()
+        .includes(filters.familyContact.toLowerCase())
+    ) {
       return false
     }
 
@@ -232,7 +247,9 @@ export function CasesGrid({ filters = {} }: CasesGridProps) {
 
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-slate-400" />
-                      <span className="line-clamp-1">{case_.assignedMember}</span>
+                      <span className="line-clamp-1">
+                        {case_.familyContactName} - {case_.familyRelationship}
+                      </span>
                     </div>
                   </div>
                 </div>

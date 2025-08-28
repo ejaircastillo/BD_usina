@@ -51,7 +51,7 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="victimAge" className="text-sm font-medium text-slate-700">
-              Edad
+              Edad *
             </Label>
             <Input
               id="victimAge"
@@ -60,6 +60,7 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
               value={data.age || ""}
               onChange={(e) => handleChange("age", e.target.value)}
               className="border-slate-300"
+              required
             />
           </div>
 
@@ -78,7 +79,7 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="victimPhone" className="text-sm font-medium text-slate-700">
-              Teléfono
+              Teléfono de Contacto Familiar
             </Label>
             <Input
               id="victimPhone"
@@ -90,15 +91,27 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="victimEmail" className="text-sm font-medium text-slate-700">
-              Email
+            <Label htmlFor="victimSocialMedia" className="text-sm font-medium text-slate-700">
+              Redes Sociales
             </Label>
             <Input
-              id="victimEmail"
-              type="email"
-              placeholder="email@ejemplo.com"
-              value={data.email || ""}
-              onChange={(e) => handleChange("email", e.target.value)}
+              id="victimSocialMedia"
+              placeholder="Instagram, Facebook, Twitter, etc."
+              value={data.socialMedia || ""}
+              onChange={(e) => handleChange("socialMedia", e.target.value)}
+              className="border-slate-300"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="victimNationality" className="text-sm font-medium text-slate-700">
+              Nacionalidad
+            </Label>
+            <Input
+              id="victimNationality"
+              placeholder="Nacionalidad"
+              value={data.nationality || ""}
+              onChange={(e) => handleChange("nationality", e.target.value)}
               className="border-slate-300"
             />
           </div>
@@ -106,7 +119,7 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
 
         <div className="mt-4 space-y-2">
           <Label htmlFor="victimAddress" className="text-sm font-medium text-slate-700">
-            Dirección Completa
+            Dirección de Residencia de la Víctima
           </Label>
           <Textarea
             id="victimAddress"
@@ -120,7 +133,7 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
 
         <div className="mt-4 space-y-2">
           <Label htmlFor="victimNotes" className="text-sm font-medium text-slate-700">
-            Notas Adicionales
+            Notas Adicionales u Observaciones
           </Label>
           <Textarea
             id="victimNotes"

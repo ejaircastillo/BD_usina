@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, MapPin, User } from "lucide-react"
+import { MapPin, User } from "lucide-react"
 import { useEffect, useState } from "react"
 
 const mockCases = [
@@ -14,7 +14,9 @@ const mockCases = [
     location: "La Plata, Buenos Aires",
     province: "Buenos Aires",
     status: "En investigación",
-    assignedMember: "Dr. María González",
+    familyContactName: "Juan Carlos Rodríguez",
+    familyRelationship: "Padre",
+    familyContactPhone: "+54 9 221 456-7890",
   },
   {
     id: "2",
@@ -23,7 +25,9 @@ const mockCases = [
     location: "Rosario, Santa Fe",
     province: "Santa Fe",
     status: "Procesado",
-    assignedMember: "Dr. Carlos Rodríguez",
+    familyContactName: "Elena Fernández",
+    familyRelationship: "Madre",
+    familyContactPhone: "+54 9 341 234-5678",
   },
   {
     id: "3",
@@ -32,7 +36,9 @@ const mockCases = [
     location: "Córdoba Capital",
     province: "Córdoba",
     status: "Juicio oral",
-    assignedMember: "Dra. Ana Martínez",
+    familyContactName: "Roberto Martínez",
+    familyRelationship: "Hermano",
+    familyContactPhone: "+54 9 351 345-6789",
   },
   {
     id: "4",
@@ -41,7 +47,9 @@ const mockCases = [
     location: "Mendoza Capital",
     province: "Mendoza",
     status: "Condenado",
-    assignedMember: "Dr. Luis Fernández",
+    familyContactName: "Carmen García",
+    familyRelationship: "Esposa",
+    familyContactPhone: "+54 9 261 567-8901",
   },
   {
     id: "5",
@@ -50,7 +58,9 @@ const mockCases = [
     location: "Tucumán Capital",
     province: "Tucumán",
     status: "En investigación",
-    assignedMember: "Dra. Carmen López",
+    familyContactName: "Miguel López",
+    familyRelationship: "Padre",
+    familyContactPhone: "+54 9 381 678-9012",
   },
   {
     id: "6",
@@ -59,7 +69,9 @@ const mockCases = [
     location: "Salta Capital",
     province: "Salta",
     status: "Imputado identificado",
-    assignedMember: "Dr. María González",
+    familyContactName: "Ana Morales",
+    familyRelationship: "Madre",
+    familyContactPhone: "+54 9 387 789-0123",
   },
   {
     id: "7",
@@ -68,7 +80,9 @@ const mockCases = [
     location: "Mar del Plata, Buenos Aires",
     province: "Buenos Aires",
     status: "Procesado",
-    assignedMember: "Dr. Carlos Rodríguez",
+    familyContactName: "Luis Jiménez",
+    familyRelationship: "Hijo",
+    familyContactPhone: "+54 9 223 890-1234",
   },
   {
     id: "8",
@@ -77,7 +91,9 @@ const mockCases = [
     location: "Santa Fe Capital",
     province: "Santa Fe",
     status: "Archivo",
-    assignedMember: "Dra. Ana Martínez",
+    familyContactName: "María Torres",
+    familyRelationship: "Hija",
+    familyContactPhone: "+54 9 342 901-2345",
   },
   {
     id: "9",
@@ -86,7 +102,9 @@ const mockCases = [
     location: "Villa Carlos Paz, Córdoba",
     province: "Córdoba",
     status: "Sobreseído",
-    assignedMember: "Dr. Luis Fernández",
+    familyContactName: "Pedro Herrera",
+    familyRelationship: "Esposo",
+    familyContactPhone: "+54 9 351 012-3456",
   },
   {
     id: "10",
@@ -95,7 +113,9 @@ const mockCases = [
     location: "San Miguel de Tucumán",
     province: "Tucumán",
     status: "En investigación",
-    assignedMember: "Dra. Carmen López",
+    familyContactName: "Rosa Castro",
+    familyRelationship: "Madre",
+    familyContactPhone: "+54 9 381 123-4567",
   },
   {
     id: "11",
@@ -104,7 +124,9 @@ const mockCases = [
     location: "Neuquén Capital",
     province: "Neuquén",
     status: "Procesado",
-    assignedMember: "Dr. Miguel Herrera",
+    familyContactName: "Carlos Vega",
+    familyRelationship: "Hermano",
+    familyContactPhone: "+54 9 299 234-5678",
   },
   {
     id: "12",
@@ -113,7 +135,9 @@ const mockCases = [
     location: "Posadas, Misiones",
     province: "Misiones",
     status: "En investigación",
-    assignedMember: "Dra. Elena Castro",
+    familyContactName: "Marta Ruiz",
+    familyRelationship: "Madre",
+    familyContactPhone: "+54 9 376 345-6789",
   },
 ]
 
@@ -159,18 +183,20 @@ function CaseCard({ case: caseData }: CaseCardProps) {
 
             <div className="space-y-2 text-sm text-slate-600">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-blue-600" />
-                <span>{new Date(caseData.incidentDate).toLocaleDateString("es-AR")}</span>
-              </div>
-
-              <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-blue-600" />
                 <span className="line-clamp-1">{caseData.location}</span>
               </div>
 
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-blue-600" />
-                <span className="line-clamp-1">{caseData.assignedMember}</span>
+                <span className="line-clamp-1">
+                  {caseData.familyContactName} - {caseData.familyRelationship}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 text-blue-600 text-center">📞</span>
+                <span className="line-clamp-1 font-mono text-xs">{caseData.familyContactPhone}</span>
               </div>
             </div>
           </div>

@@ -3,7 +3,7 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface FollowUpFormProps {
   data: any
@@ -19,11 +19,26 @@ const members = [
 ]
 
 export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: string | boolean) => {
     onChange({
       ...data,
       [field]: value,
     })
+  }
+
+  const handleCheckboxChange = (field: string, value: string, checked: boolean) => {
+    const currentValues = data[field] || []
+    if (checked) {
+      onChange({
+        ...data,
+        [field]: [...currentValues, value],
+      })
+    } else {
+      onChange({
+        ...data,
+        [field]: currentValues.filter((item: string) => item !== value),
+      })
+    }
   }
 
   return (
@@ -31,21 +46,98 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
       <div>
         <h3 className="text-lg font-semibold text-slate-900 font-heading mb-4">Seguimiento de la ONG</h3>
 
+        <div className="mb-6">
+          <h4 className="text-md font-medium text-slate-900 mb-4">Tipo de Acompañamiento</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {[
+              "Asesoramiento Legal",
+              "Patrocinio Letrado",
+              "Difusión en Redes",
+              "Contención Emocional",
+              "Ayuda Psicológica Profesional",
+              "Derivación a otros Organismos",
+            ].map((tipo) => (
+              <div key={tipo} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`tipo-${tipo}`}
+                  checked={(data.tipoAcompanamiento || []).includes(tipo)}
+                  onCheckedChange={(checked) => handleCheckboxChange("tipoAcompanamiento", tipo, checked as boolean)}
+                />
+                <Label htmlFor={`tipo-${tipo}`} className="text-sm text-slate-700">
+                  {tipo}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="space-y-2">
+            <Label htmlFor="abogadoQuerellante" className="text-sm font-medium text-slate-700">
+              Abogado Querellante
+            </Label>
+            <Input
+              id="abogadoQuerellante"
+              placeholder="Nombre del abogado querellante"
+              value={data.abogadoQuerellante || ""}
+              onChange={(e) => handleChange("abogadoQuerellante", e.target.value)}
+              className="border-slate-300"
+            />
+          </div>
+
+          <div className="flex items-center space-x-2 mt-6">
+            <Checkbox
+              id="amicusCuriae"
+              checked={data.amicusCuriae || false}
+              onCheckedChange={(checked) => handleChange("amicusCuriae", checked as boolean)}
+            />
+            <Label htmlFor="amicusCuriae" className="text-sm text-slate-700">
+              Amicus Curiae
+            </Label>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="space-y-2">
+            <Label htmlFor="comoLlegoCaso" className="text-sm font-medium text-slate-700">
+              Cómo llegó el caso
+            </Label>
+            <Input
+              id="comoLlegoCaso"
+              placeholder="Descripción de cómo llegó el caso a la organización"
+              value={data.comoLlegoCaso || ""}
+              onChange={(e) => handleChange("comoLlegoCaso", e.target.value)}
+              className="border-slate-300"
+            />
+          </div>
+
+          <div className="flex items-center space-x-2 mt-6">
+            <Checkbox
+              id="primerContacto"
+              checked={data.primerContacto || false}
+              onCheckedChange={(checked) => handleChange("primerContacto", checked as boolean)}
+            />
+            <Label htmlFor="primerContacto" className="text-sm text-slate-700">
+              Primer Contacto (orientación inicial sin seguimiento completo)
+            </Label>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-sm font-medium text-slate-700">Miembro Asignado</Label>
-            <Select value={data.assignedMember || ""} onValueChange={(value) => handleChange("assignedMember", value)}>
-              <SelectTrigger className="border-slate-300">
-                <SelectValue placeholder="Seleccionar miembro" />
-              </SelectTrigger>
-              <SelectContent>
-                {members.map((member) => (
-                  <SelectItem key={member} value={member}>
-                    {member}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              placeholder="Escribir nombre del miembro de Usina de Justicia"
+              value={data.assignedMember || ""}
+              onChange={(e) => handleChange("assignedMember", e.target.value)}
+              className="border-slate-300"
+              list="members-list"
+            />
+            <datalist id="members-list">
+              {members.map((member) => (
+                <option key={member} value={member} />
+              ))}
+            </datalist>
           </div>
 
           <div className="space-y-2">

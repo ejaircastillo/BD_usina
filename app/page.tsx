@@ -29,10 +29,8 @@ export default function HomePage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-12 text-center">
-          <h1 className="text-4xl font-bold text-slate-900 font-heading mb-4">Observatorio de Víctimas</h1>
-          <p className="text-xl text-slate-600 mb-8 max-w-3xl mx-auto">
-            Sistema integral de seguimiento y registro de casos de violencia institucional
-          </p>
+          <h1 className="text-4xl font-bold text-slate-900 font-heading mb-4">Base de Datos de Víctimas</h1>
+          <p className="text-xl text-slate-600 mb-8 max-w-3xl mx-auto">Historias de los casos que acompañamos</p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link href="/casos/nuevo">

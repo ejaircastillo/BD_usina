@@ -37,6 +37,8 @@ const provinces = [
   "CABA",
 ]
 
+const locationTypes = ["Vía Pública", "Vivienda Particular", "Comercio", "Unidad Penitenciaria", "Comisaría", "Otro"]
+
 export function IncidentForm({ data, onChange }: IncidentFormProps) {
   const handleChange = (field: string, value: string) => {
     onChange({
@@ -61,6 +63,20 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
               value={data.date || ""}
               onChange={(e) => handleChange("date", e.target.value)}
               className="border-slate-300"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="deathDate" className="text-sm font-medium text-slate-700">
+              Fecha de Fallecimiento *
+            </Label>
+            <Input
+              id="deathDate"
+              type="date"
+              value={data.deathDate || ""}
+              onChange={(e) => handleChange("deathDate", e.target.value)}
+              className="border-slate-300"
+              required
             />
           </div>
 
@@ -105,19 +121,43 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
               className="border-slate-300"
             />
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="municipality" className="text-sm font-medium text-slate-700">
+              Municipio
+            </Label>
+            <Input
+              id="municipality"
+              placeholder="Municipio donde sucedieron los hechos"
+              value={data.municipality || ""}
+              onChange={(e) => handleChange("municipality", e.target.value)}
+              className="border-slate-300"
+            />
+          </div>
         </div>
 
         <div className="mt-4 space-y-2">
-          <Label htmlFor="incidentLocation" className="text-sm font-medium text-slate-700">
-            Lugar Específico del Hecho
-          </Label>
-          <Input
-            id="incidentLocation"
-            placeholder="Dirección, intersección, punto de referencia"
-            value={data.location || ""}
-            onChange={(e) => handleChange("location", e.target.value)}
-            className="border-slate-300"
-          />
+          <Label className="text-sm font-medium text-slate-700">Lugar Específico del Hecho</Label>
+          <Select value={data.locationType || ""} onValueChange={(value) => handleChange("locationType", value)}>
+            <SelectTrigger className="border-slate-300">
+              <SelectValue placeholder="Seleccionar tipo de lugar" />
+            </SelectTrigger>
+            <SelectContent>
+              {locationTypes.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {data.locationType === "Otro" && (
+            <Input
+              placeholder="Especificar otro lugar"
+              value={data.locationOther || ""}
+              onChange={(e) => handleChange("locationOther", e.target.value)}
+              className="border-slate-300 mt-2"
+            />
+          )}
         </div>
 
         <div className="mt-4 space-y-2">
@@ -139,14 +179,27 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="legalCase" className="text-sm font-medium text-slate-700">
-                Causa Judicial
+              <Label htmlFor="caseNumber" className="text-sm font-medium text-slate-700">
+                Número de Causa
               </Label>
               <Input
-                id="legalCase"
+                id="caseNumber"
                 placeholder="IPP N° o número de causa"
-                value={data.legalCase || ""}
-                onChange={(e) => handleChange("legalCase", e.target.value)}
+                value={data.caseNumber || ""}
+                onChange={(e) => handleChange("caseNumber", e.target.value)}
+                className="border-slate-300"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="caseTitle" className="text-sm font-medium text-slate-700">
+                Carátula
+              </Label>
+              <Input
+                id="caseTitle"
+                placeholder="Carátula de la causa"
+                value={data.caseTitle || ""}
+                onChange={(e) => handleChange("caseTitle", e.target.value)}
                 className="border-slate-300"
               />
             </div>
@@ -165,37 +218,30 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="court" className="text-sm font-medium text-slate-700">
-                Juzgado/UFI
+              <Label htmlFor="prosecutorEmail" className="text-sm font-medium text-slate-700">
+                Email de la Fiscalía
               </Label>
               <Input
-                id="court"
-                placeholder="Juzgado o UFI"
-                value={data.court || ""}
-                onChange={(e) => handleChange("court", e.target.value)}
+                id="prosecutorEmail"
+                type="email"
+                placeholder="email@fiscalia.gov.ar"
+                value={data.prosecutorEmail || ""}
+                onChange={(e) => handleChange("prosecutorEmail", e.target.value)}
                 className="border-slate-300"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="status" className="text-sm font-medium text-slate-700">
-                Estado Procesal
+              <Label htmlFor="prosecutorPhone" className="text-sm font-medium text-slate-700">
+                Teléfono de la Fiscalía
               </Label>
-              <Select value={data.status || ""} onValueChange={(value) => handleChange("status", value)}>
-                <SelectTrigger className="border-slate-300">
-                  <SelectValue placeholder="Seleccionar estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="investigation">En investigación</SelectItem>
-                  <SelectItem value="identified">Imputado identificado</SelectItem>
-                  <SelectItem value="processed">Procesado</SelectItem>
-                  <SelectItem value="trial">Juicio oral</SelectItem>
-                  <SelectItem value="convicted">Condenado</SelectItem>
-                  <SelectItem value="acquitted">Absuelto</SelectItem>
-                  <SelectItem value="dismissed">Sobreseído</SelectItem>
-                  <SelectItem value="archived">Archivo</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="prosecutorPhone"
+                placeholder="+54 11 1234-5678"
+                value={data.prosecutorPhone || ""}
+                onChange={(e) => handleChange("prosecutorPhone", e.target.value)}
+                className="border-slate-300"
+              />
             </div>
           </div>
         </div>

@@ -14,84 +14,6 @@ import { FollowUpForm } from "./forms/follow-up-form"
 import { ResourcesForm } from "./forms/resources-form"
 import { useToast } from "@/hooks/use-toast"
 
-// Interfaces para tipado
-interface VictimData {
-  name?: string
-  surname?: string
-  birthDate?: string
-  age?: string
-  profession?: string
-  phone?: string
-  email?: string
-  address?: string
-  gender?: string
-  maritalStatus?: string
-  notes?: string
-}
-
-interface IncidentData {
-  date?: string
-  time?: string
-  province?: string
-  city?: string
-  location?: string
-  summary?: string
-  type?: string
-  modality?: string
-  circumstances?: string
-  witnesses?: string
-  evidence?: string
-  previousReport?: boolean
-  legalCase?: string
-  prosecutor?: string
-  court?: string
-  status?: string
-  notes?: string
-}
-
-interface AccusedData {
-  id: number
-  name?: string
-  alias?: string
-  age?: string
-  description?: string
-  status?: string
-  charges?: string
-}
-
-interface FollowUpData {
-  assignedMember?: string
-  assignedPhone?: string
-  assignedEmail?: string
-  assignmentDate?: string
-  familyContact?: string
-  familyPhone?: string
-  familyEmail?: string
-  familyAddress?: string
-  notes?: string
-  nextActions?: string
-}
-
-interface ResourceData {
-  id: number
-  type?: string
-  title?: string
-  url?: string
-  source?: string
-  date?: string
-  description?: string
-}
-
-interface FormData {
-  victim: VictimData
-  incident: IncidentData
-  accused: AccusedData[]
-  followUp: FollowUpData
-  resources: ResourceData[]
-  internalId?: string
-  expedientNumber?: string
-}
-
 interface CaseFormProps {
   mode: "create" | "edit"
   caseId?: string
@@ -102,172 +24,43 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("victim")
   const [isSaving, setIsSaving] = useState(false)
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState({
     victim: {},
     incident: {},
     accused: [],
     followUp: {},
     resources: [],
-    internalId: '',
-    expedientNumber: ''
   })
 
   const handleSave = async () => {
-    if (!formData) return
-
     setIsSaving(true)
-    let createdVictimaId = null
-    let createdHechoId = null
-
     try {
-      // Validar campos requeridos
-      if (!formData.victim?.name) {
-        toast({
-          title: 'Error de validación',
-          description: 'El nombre de la víctima es requerido',
-          variant: 'destructive'
-        })
-        setIsSaving(false)
-        return
-      }
-
-      if (!formData.incident?.date) {
-        toast({
-          title: 'Error de validación',
-          description: 'La fecha del hecho es requerida',
-          variant: 'destructive'
-        })
-        setIsSaving(false)
-        return
-      }
-
-      // Paso 1: Crear víctima
-      console.log('Creating victim:', formData.victim)
-      const victimResponse = await fetch('/api/victimas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nombre: formData.victim.name,
-          apellido: formData.victim.surname || '',
-          fecha_nacimiento: formData.victim.birthDate || null,
-          telefono: formData.victim.phone || null,
-          email: formData.victim.email || null,
-          direccion: formData.victim.address || null,
-          genero: formData.victim.gender || null,
-          estado_civil: formData.victim.maritalStatus || null,
-          ocupacion: formData.victim.profession || null,
-          observaciones: formData.victim.notes || null
-        })
-      })
-
-      if (!victimResponse.ok) {
-        const error = await victimResponse.json()
-        throw new Error(`Error al crear víctima: ${error.error}`)
-      }
-
-      const { victima } = await victimResponse.json()
-      createdVictimaId = victima.id
-      console.log('Created victim with ID:', createdVictimaId)
-
-      // Paso 2: Crear hecho
-      console.log('Creating hecho:', formData.incident)
-      const hechoResponse = await fetch('/api/hechos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fecha_hecho: formData.incident.date,
-          hora_hecho: formData.incident.time || null,
-          lugar_hecho: formData.incident.location || null,
-          descripcion: formData.incident.summary || null,
-          tipo_delito: formData.incident.type || null,
-          modalidad: formData.incident.modality || null,
-          circunstancias: formData.incident.circumstances || null,
-          testigos: formData.incident.witnesses || null,
-          evidencias: formData.incident.evidence || null,
-          denuncia_previa: formData.incident.previousReport || null,
-          observaciones: formData.incident.notes || null
-        })
-      })
-
-      if (!hechoResponse.ok) {
-        // Rollback: eliminar víctima creada
-        if (createdVictimaId) {
-          await fetch(`/api/victimas`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: createdVictimaId })
-          })
-        }
-
-        const error = await hechoResponse.json()
-        throw new Error(`Error al crear hecho: ${error.error}`)
-      }
-
-      const { hecho } = await hechoResponse.json()
-      createdHechoId = hecho.id
-      console.log('Created hecho with ID:', createdHechoId)
-
-      // Paso 3: Crear caso vinculando víctima y hecho
-      console.log('Creating caso with victim ID:', createdVictimaId, 'and hecho ID:', createdHechoId)
-      const casoResponse = await fetch('/api/casos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id_victima: createdVictimaId,
-          id_hecho: createdHechoId,
-          estado: formData.incident?.status || 'Iniciado',
-          id_interno: formData.internalId || null,
-          numero_expediente: formData.expedientNumber || null
-        })
-      })
-
-      if (!casoResponse.ok) {
-        // Rollback completo: eliminar hecho y víctima
-        if (createdHechoId) {
-          await fetch(`/api/hechos`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: createdHechoId })
-          })
-        }
-
-        if (createdVictimaId) {
-          await fetch(`/api/victimas`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: createdVictimaId })
-          })
-        }
-
-        const error = await casoResponse.json()
-        throw new Error(`Error al crear caso: ${error.error}`)
-      }
-
-      const { caso, message } = await casoResponse.json()
-      console.log('Successfully created complete caso:', caso.id)
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000))
 
       toast({
-        title: 'Caso creado exitosamente',
-        description: message || `Caso ${caso.id} creado correctamente`,
+        title: mode === "create" ? "Caso creado" : "Caso actualizado",
+        description: "Los datos se han guardado correctamente.",
       })
 
-      // Redirigir al caso creado
-      router.push(`/casos/${caso.id}`)
-
+      // Redirect to cases list or case detail
+      if (mode === "create") {
+        router.push("/")
+      } else {
+        router.push(`/casos/${caseId}`)
+      }
     } catch (error) {
-      console.error('Error saving caso:', error)
-      
       toast({
-        title: 'Error al guardar',
-        description: error instanceof Error ? error.message : 'Error desconocido',
-        variant: 'destructive'
+        title: "Error",
+        description: "No se pudo guardar el caso. Intente nuevamente.",
+        variant: "destructive",
       })
     } finally {
       setIsSaving(false)
     }
   }
 
-  const updateFormData = (section: keyof FormData, data: any) => {
+  const updateFormData = (section: string, data: any) => {
     setFormData((prev) => ({
       ...prev,
       [section]: data,
