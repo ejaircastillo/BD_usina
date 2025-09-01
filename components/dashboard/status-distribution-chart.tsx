@@ -3,39 +3,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts"
+import { createClient } from "@/lib/supabase/client"
+import { useEffect, useState } from "react"
 
-const data = [
-  {
-    status: "En investigación",
-    cases: 234,
-    fill: "hsl(var(--chart-1))",
-  },
-  {
-    status: "Imputado identificado",
-    cases: 189,
-    fill: "hsl(var(--chart-2))",
-  },
-  {
-    status: "Procesado",
-    cases: 156,
-    fill: "hsl(var(--chart-3))",
-  },
-  {
-    status: "Juicio oral",
-    cases: 98,
-    fill: "hsl(var(--chart-4))",
-  },
-  {
-    status: "Condenado",
-    cases: 355,
-    fill: "hsl(var(--chart-5))",
-  },
-  {
-    status: "Otros",
-    cases: 215,
-    fill: "hsl(var(--muted))",
-  },
-]
+interface StatusData {
+  status: string
+  cases: number
+  fill: string
+}
 
 const chartConfig = {
   cases: {
@@ -61,13 +36,98 @@ const chartConfig = {
     label: "Condenado",
     color: "hsl(var(--chart-5))",
   },
+  Prescripción: {
+    label: "Prescripción",
+    color: "hsl(var(--chart-6))",
+  },
   Otros: {
     label: "Otros",
     color: "hsl(var(--muted))",
   },
 }
 
+const statusColors: { [key: string]: string } = {
+  "En investigación": "hsl(var(--chart-1))",
+  "Imputado identificado": "hsl(var(--chart-2))",
+  Procesado: "hsl(var(--chart-3))",
+  "Juicio oral": "hsl(var(--chart-4))",
+  Condenado: "hsl(var(--chart-5))",
+  Prescripción: "hsl(var(--chart-6))",
+  Otros: "hsl(var(--muted))",
+}
+
 export function StatusDistributionChart() {
+  const [data, setData] = useState<StatusData[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchStatusData = async () => {
+      try {
+        const supabase = createClient()
+
+        const { data: imputados, error } = await supabase.from("imputados").select("estado_procesal")
+
+        if (error) {
+          console.error("Error fetching status data:", error)
+          return
+        }
+
+        const statusCounts: { [key: string]: number } = {}
+
+        imputados?.forEach((imputado) => {
+          const status = imputado.estado_procesal || "Otros"
+          statusCounts[status] = (statusCounts[status] || 0) + 1
+        })
+
+        const chartData = Object.entries(statusCounts).map(([status, cases]) => ({
+          status,
+          cases,
+          fill: statusColors[status] || statusColors["Otros"],
+        }))
+
+        setData(chartData)
+      } catch (error) {
+        console.error("Error fetching status data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStatusData()
+  }, [])
+
+  if (loading) {
+    return (
+      <Card className="border-slate-200">
+        <CardHeader>
+          <CardTitle className="font-heading">Distribución por Estado Procesal</CardTitle>
+          <CardDescription>Casos según su estado en el proceso judicial</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-[300px]">
+            <p className="text-slate-500">Cargando datos...</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (data.length === 0) {
+    return (
+      <Card className="border-slate-200">
+        <CardHeader>
+          <CardTitle className="font-heading">Distribución por Estado Procesal</CardTitle>
+          <CardDescription>Casos según su estado en el proceso judicial</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-[300px]">
+            <p className="text-slate-500">No hay casos con estado procesal registrados aún</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card className="border-slate-200">
       <CardHeader>

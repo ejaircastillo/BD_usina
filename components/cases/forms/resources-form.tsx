@@ -16,12 +16,12 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
   const addResource = () => {
     const newResource = {
       id: Date.now(),
-      type: "",
-      title: "",
+      tipo: "",
+      titulo: "",
       url: "",
-      source: "",
-      date: "",
-      description: "",
+      fuente: "",
+      fecha: "",
+      descripcion: "",
     }
     onChange([...data, newResource])
   }
@@ -69,8 +69,8 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-slate-700">Tipo de Recurso</Label>
                     <Select
-                      value={resource.type || ""}
-                      onValueChange={(value) => updateResource(resource.id, "type", value)}
+                      value={resource.tipo || ""}
+                      onValueChange={(value) => updateResource(resource.id, "tipo", value)}
                     >
                       <SelectTrigger className="border-slate-300">
                         <SelectValue placeholder="Seleccionar tipo" />
@@ -94,8 +94,8 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
                     <Input
                       id={`date-${resource.id}`}
                       type="date"
-                      value={resource.date || ""}
-                      onChange={(e) => updateResource(resource.id, "date", e.target.value)}
+                      value={resource.fecha || ""}
+                      onChange={(e) => updateResource(resource.id, "fecha", e.target.value)}
                       className="border-slate-300"
                     />
                   </div>
@@ -108,8 +108,8 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
                   <Input
                     id={`title-${resource.id}`}
                     placeholder="Título de la noticia, video, documento, etc."
-                    value={resource.title || ""}
-                    onChange={(e) => updateResource(resource.id, "title", e.target.value)}
+                    value={resource.titulo || ""}
+                    onChange={(e) => updateResource(resource.id, "titulo", e.target.value)}
                     className="border-slate-300"
                   />
                 </div>
@@ -146,8 +146,8 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
                   <Input
                     id={`source-${resource.id}`}
                     placeholder="Nombre del medio, canal, sitio web, etc."
-                    value={resource.source || ""}
-                    onChange={(e) => updateResource(resource.id, "source", e.target.value)}
+                    value={resource.fuente || ""}
+                    onChange={(e) => updateResource(resource.id, "fuente", e.target.value)}
                     className="border-slate-300"
                   />
                 </div>
@@ -159,8 +159,8 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
                   <Textarea
                     id={`description-${resource.id}`}
                     placeholder="Descripción del contenido, relevancia para el caso"
-                    value={resource.description || ""}
-                    onChange={(e) => updateResource(resource.id, "description", e.target.value)}
+                    value={resource.descripcion || ""}
+                    onChange={(e) => updateResource(resource.id, "descripcion", e.target.value)}
                     className="border-slate-300"
                     rows={2}
                   />

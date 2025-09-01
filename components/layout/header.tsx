@@ -1,13 +1,20 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { LogOut, BarChart3 } from "lucide-react"
 import Image from "next/image"
 
 export function Header() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleLogout = () => {
+    localStorage.removeItem("isAuthenticated")
+    localStorage.removeItem("userEmail")
+    router.push("/login")
+  }
 
   return (
     <header className="bg-white border-b border-slate-200 shadow-sm">
@@ -53,6 +60,7 @@ export function Header() {
             variant="outline"
             size="sm"
             className="flex items-center gap-2 border-blue-200 text-blue-700 hover:bg-blue-50 bg-transparent"
+            onClick={handleLogout}
           >
             <LogOut className="w-4 h-4" />
             Cerrar Sesión

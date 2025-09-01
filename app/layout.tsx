@@ -2,6 +2,8 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Lato, Montserrat } from "next/font/google"
 import "./globals.css"
+import { AuthGuard } from "@/components/auth/auth-guard"
+import { SupabaseListener } from "@/components/auth/supabase-listener"
 
 const lato = Lato({
   subsets: ["latin"],
@@ -18,7 +20,7 @@ const montserrat = Montserrat({
 })
 
 export const metadata: Metadata = {
-  title: "Usina de Justicia - Observatorio de Víctimas",
+  title: "Usina de Justicia - Base de Datos de Víctimas",
   description: "Sistema de seguimiento y registro de casos de inseguridad",
     generator: 'v0.app'
 }
@@ -30,7 +32,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${lato.variable} ${montserrat.variable}`}>
-      <body className="font-sans antialiased bg-slate-50 text-slate-900">{children}</body>
+      <body className="font-sans antialiased bg-slate-50 text-slate-900">
+        <SupabaseListener />
+        <AuthGuard>{children}</AuthGuard>
+      </body>
     </html>
   )
 }

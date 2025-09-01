@@ -128,8 +128,8 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
             <Label className="text-sm font-medium text-slate-700">Miembro Asignado</Label>
             <Input
               placeholder="Escribir nombre del miembro de Usina de Justicia"
-              value={data.assignedMember || ""}
-              onChange={(e) => handleChange("assignedMember", e.target.value)}
+              value={data.miembroAsignado || ""}
+              onChange={(e) => handleChange("miembroAsignado", e.target.value)}
               className="border-slate-300"
               list="members-list"
             />
@@ -147,8 +147,8 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
             <Input
               id="assignedPhone"
               placeholder="+54 11 1234-5678"
-              value={data.assignedPhone || ""}
-              onChange={(e) => handleChange("assignedPhone", e.target.value)}
+              value={data.telefonoMiembro || ""}
+              onChange={(e) => handleChange("telefonoMiembro", e.target.value)}
               className="border-slate-300"
             />
           </div>
@@ -161,8 +161,8 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
               id="assignedEmail"
               type="email"
               placeholder="email@usinajusticia.org"
-              value={data.assignedEmail || ""}
-              onChange={(e) => handleChange("assignedEmail", e.target.value)}
+              value={data.emailMiembro || ""}
+              onChange={(e) => handleChange("emailMiembro", e.target.value)}
               className="border-slate-300"
             />
           </div>
@@ -174,8 +174,8 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
             <Input
               id="assignmentDate"
               type="date"
-              value={data.assignmentDate || ""}
-              onChange={(e) => handleChange("assignmentDate", e.target.value)}
+              value={data.fechaAsignacion || ""}
+              onChange={(e) => handleChange("fechaAsignacion", e.target.value)}
               className="border-slate-300"
             />
           </div>
@@ -192,8 +192,8 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
               <Input
                 id="familyContact"
                 placeholder="Nombre y relación (ej: Roberto Rodríguez - hermano)"
-                value={data.familyContact || ""}
-                onChange={(e) => handleChange("familyContact", e.target.value)}
+                value={data.contactoFamiliar || ""}
+                onChange={(e) => handleChange("contactoFamiliar", e.target.value)}
                 className="border-slate-300"
               />
             </div>
@@ -205,8 +205,8 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
               <Input
                 id="familyPhone"
                 placeholder="+54 11 1234-5678"
-                value={data.familyPhone || ""}
-                onChange={(e) => handleChange("familyPhone", e.target.value)}
+                value={data.telefonoContacto || ""}
+                onChange={(e) => handleChange("telefonoContacto", e.target.value)}
                 className="border-slate-300"
               />
             </div>
@@ -219,8 +219,8 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
                 id="familyEmail"
                 type="email"
                 placeholder="email@ejemplo.com"
-                value={data.familyEmail || ""}
-                onChange={(e) => handleChange("familyEmail", e.target.value)}
+                value={data.emailContacto || ""}
+                onChange={(e) => handleChange("emailContacto", e.target.value)}
                 className="border-slate-300"
               />
             </div>
@@ -232,8 +232,8 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
               <Input
                 id="familyAddress"
                 placeholder="Dirección completa"
-                value={data.familyAddress || ""}
-                onChange={(e) => handleChange("familyAddress", e.target.value)}
+                value={data.direccionContacto || ""}
+                onChange={(e) => handleChange("direccionContacto", e.target.value)}
                 className="border-slate-300"
               />
             </div>
@@ -247,8 +247,8 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
           <Textarea
             id="followUpNotes"
             placeholder="Notas sobre el seguimiento del caso, necesidades de la familia, derivaciones realizadas, etc."
-            value={data.notes || ""}
-            onChange={(e) => handleChange("notes", e.target.value)}
+            value={data.notasSeguimiento || ""}
+            onChange={(e) => handleChange("notasSeguimiento", e.target.value)}
             className="border-slate-300"
             rows={4}
           />
@@ -261,8 +261,8 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
           <Textarea
             id="nextActions"
             placeholder="Acciones planificadas, citas programadas, gestiones pendientes"
-            value={data.nextActions || ""}
-            onChange={(e) => handleChange("nextActions", e.target.value)}
+            value={data.proximasAcciones || ""}
+            onChange={(e) => handleChange("proximasAcciones", e.target.value)}
             className="border-slate-300"
             rows={3}
           />

@@ -1,21 +1,44 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
-// Mock data for case locations
-const caseLocations = [
-  { province: "Buenos Aires", cases: 342, coordinates: { x: 58, y: 65 } },
-  { province: "CABA", cases: 189, coordinates: { x: 58, y: 62 } },
-  { province: "Santa Fe", cases: 156, coordinates: { x: 52, y: 55 } },
-  { province: "Córdoba", cases: 134, coordinates: { x: 48, y: 55 } },
-  { province: "Mendoza", cases: 98, coordinates: { x: 38, y: 68 } },
-  { province: "Tucumán", cases: 76, coordinates: { x: 45, y: 42 } },
-  { province: "Entre Ríos", cases: 65, coordinates: { x: 52, y: 58 } },
-  { province: "Salta", cases: 54, coordinates: { x: 42, y: 35 } },
-  { province: "Misiones", cases: 43, coordinates: { x: 62, y: 45 } },
-  { province: "Chaco", cases: 38, coordinates: { x: 52, y: 42 } },
-]
+interface ProvinceData {
+  province: string
+  cases: number
+  coordinates: { x: number; y: number }
+}
+
+// Coordinates for Argentine provinces (simplified)
+const provinceCoordinates: Record<string, { x: number; y: number }> = {
+  "Buenos Aires": { x: 58, y: 65 },
+  CABA: { x: 58, y: 62 },
+  "Santa Fe": { x: 52, y: 55 },
+  Córdoba: { x: 48, y: 55 },
+  Mendoza: { x: 38, y: 68 },
+  Tucumán: { x: 45, y: 42 },
+  "Entre Ríos": { x: 52, y: 58 },
+  Salta: { x: 42, y: 35 },
+  Misiones: { x: 62, y: 45 },
+  Chaco: { x: 52, y: 42 },
+  Corrientes: { x: 56, y: 48 },
+  "Santiago del Estero": { x: 48, y: 48 },
+  Jujuy: { x: 42, y: 30 },
+  "San Luis": { x: 42, y: 62 },
+  Catamarca: { x: 42, y: 45 },
+  "La Rioja": { x: 40, y: 52 },
+  Formosa: { x: 52, y: 38 },
+  Neuquén: { x: 38, y: 72 },
+  "Río Negro": { x: 42, y: 78 },
+  Chubut: { x: 42, y: 85 },
+  "Santa Cruz": { x: 40, y: 92 },
+  "Tierra del Fuego": { x: 38, y: 98 },
+  "La Pampa": { x: 48, y: 68 },
+  "San Juan": { x: 38, y: 58 },
+}
 
 const getPointSize = (cases: number) => {
   if (cases > 200) return "w-4 h-4"
@@ -32,6 +55,91 @@ const getPointColor = (cases: number) => {
 }
 
 export function ArgentinaMap() {
+  const [caseLocations, setCaseLocations] = useState<ProvinceData[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const supabase = createClient()
+
+  useEffect(() => {
+    fetchCasesByProvince()
+  }, [])
+
+  const fetchCasesByProvince = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      const { data, error: fetchError } = await supabase.from("hechos").select("provincia")
+
+      if (fetchError) throw fetchError
+
+      // Count cases by province
+      const provinceCounts: Record<string, number> = {}
+      data.forEach((incident: any) => {
+        if (incident.provincia) {
+          provinceCounts[incident.provincia] = (provinceCounts[incident.provincia] || 0) + 1
+        }
+      })
+
+      // Transform to component format
+      const locations: ProvinceData[] = Object.entries(provinceCounts)
+        .map(([province, cases]) => ({
+          province,
+          cases,
+          coordinates: provinceCoordinates[province] || { x: 50, y: 50 },
+        }))
+        .sort((a, b) => b.cases - a.cases)
+
+      setCaseLocations(locations)
+    } catch (err) {
+      console.error("Error fetching case locations:", err)
+      setError("Error al cargar la distribución de casos")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <Card className="border-slate-200">
+        <CardHeader>
+          <CardTitle className="font-heading">Mapa de Casos por Provincia</CardTitle>
+          <CardDescription>Distribución geográfica de los casos registrados</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <span className="ml-2 text-slate-600">Cargando mapa...</span>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card className="border-slate-200">
+        <CardHeader>
+          <CardTitle className="font-heading">Mapa de Casos por Provincia</CardTitle>
+          <CardDescription>Error al cargar los datos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-12">
+            <p className="text-slate-600 mb-4">{error}</p>
+            <button
+              onClick={fetchCasesByProvince}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Reintentar
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const totalCases = caseLocations.reduce((sum, loc) => sum + loc.cases, 0)
+
   return (
     <Card className="border-slate-200">
       <CardHeader>
@@ -107,17 +215,14 @@ export function ArgentinaMap() {
             <div>
               <h4 className="font-medium text-slate-900 mb-3 font-heading">Top Provincias</h4>
               <div className="space-y-2">
-                {caseLocations
-                  .sort((a, b) => b.cases - a.cases)
-                  .slice(0, 5)
-                  .map((location) => (
-                    <div key={location.province} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600">{location.province}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {location.cases}
-                      </Badge>
-                    </div>
-                  ))}
+                {caseLocations.slice(0, 5).map((location) => (
+                  <div key={location.province} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600">{location.province}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {location.cases}
+                    </Badge>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -134,7 +239,7 @@ export function ArgentinaMap() {
                 </div>
                 <div className="flex justify-between">
                   <span>Total casos:</span>
-                  <span className="font-medium">{caseLocations.reduce((sum, loc) => sum + loc.cases, 0)}</span>
+                  <span className="font-medium">{totalCases}</span>
                 </div>
               </div>
             </div>

@@ -30,8 +30,8 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
             <Input
               id="victimName"
               placeholder="Nombre y apellido completo"
-              value={data.name || ""}
-              onChange={(e) => handleChange("name", e.target.value)}
+              value={data.nombreCompleto || ""}
+              onChange={(e) => handleChange("nombreCompleto", e.target.value)}
               className="border-slate-300"
             />
           </div>
@@ -43,8 +43,8 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
             <Input
               id="victimBirthDate"
               type="date"
-              value={data.birthDate || ""}
-              onChange={(e) => handleChange("birthDate", e.target.value)}
+              value={data.fechaNacimiento || ""}
+              onChange={(e) => handleChange("fechaNacimiento", e.target.value)}
               className="border-slate-300"
             />
           </div>
@@ -57,8 +57,8 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
               id="victimAge"
               type="number"
               placeholder="Edad en años"
-              value={data.age || ""}
-              onChange={(e) => handleChange("age", e.target.value)}
+              value={data.edad || ""}
+              onChange={(e) => handleChange("edad", e.target.value)}
               className="border-slate-300"
               required
             />
@@ -71,8 +71,8 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
             <Input
               id="victimProfession"
               placeholder="Profesión u ocupación"
-              value={data.profession || ""}
-              onChange={(e) => handleChange("profession", e.target.value)}
+              value={data.profesion || ""}
+              onChange={(e) => handleChange("profesion", e.target.value)}
               className="border-slate-300"
             />
           </div>
@@ -84,8 +84,8 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
             <Input
               id="victimPhone"
               placeholder="+54 11 1234-5678"
-              value={data.phone || ""}
-              onChange={(e) => handleChange("phone", e.target.value)}
+              value={data.telefonoContactoFamiliar || ""}
+              onChange={(e) => handleChange("telefonoContactoFamiliar", e.target.value)}
               className="border-slate-300"
             />
           </div>
@@ -97,8 +97,8 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
             <Input
               id="victimSocialMedia"
               placeholder="Instagram, Facebook, Twitter, etc."
-              value={data.socialMedia || ""}
-              onChange={(e) => handleChange("socialMedia", e.target.value)}
+              value={data.redesSociales || ""}
+              onChange={(e) => handleChange("redesSociales", e.target.value)}
               className="border-slate-300"
             />
           </div>
@@ -110,8 +110,8 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
             <Input
               id="victimNationality"
               placeholder="Nacionalidad"
-              value={data.nationality || ""}
-              onChange={(e) => handleChange("nationality", e.target.value)}
+              value={data.nacionalidad || ""}
+              onChange={(e) => handleChange("nacionalidad", e.target.value)}
               className="border-slate-300"
             />
           </div>
@@ -124,8 +124,8 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
           <Textarea
             id="victimAddress"
             placeholder="Calle, número, barrio, ciudad, provincia"
-            value={data.address || ""}
-            onChange={(e) => handleChange("address", e.target.value)}
+            value={data.direccionCompleta || ""}
+            onChange={(e) => handleChange("direccionCompleta", e.target.value)}
             className="border-slate-300"
             rows={3}
           />
@@ -138,8 +138,8 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
           <Textarea
             id="victimNotes"
             placeholder="Información adicional sobre la víctima"
-            value={data.notes || ""}
-            onChange={(e) => handleChange("notes", e.target.value)}
+            value={data.notasAdicionales || ""}
+            onChange={(e) => handleChange("notasAdicionales", e.target.value)}
             className="border-slate-300"
             rows={3}
           />

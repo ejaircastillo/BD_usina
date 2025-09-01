@@ -1,145 +1,23 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { MapPin, User } from "lucide-react"
-import { useEffect, useState } from "react"
+import { MapPin, User, Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
-const mockCases = [
-  {
-    id: "1",
-    victimName: "María Elena Rodríguez",
-    incidentDate: "2024-03-15",
-    location: "La Plata, Buenos Aires",
-    province: "Buenos Aires",
-    status: "En investigación",
-    familyContactName: "Juan Carlos Rodríguez",
-    familyRelationship: "Padre",
-    familyContactPhone: "+54 9 221 456-7890",
-  },
-  {
-    id: "2",
-    victimName: "Carlos Alberto Fernández",
-    incidentDate: "2024-02-28",
-    location: "Rosario, Santa Fe",
-    province: "Santa Fe",
-    status: "Procesado",
-    familyContactName: "Elena Fernández",
-    familyRelationship: "Madre",
-    familyContactPhone: "+54 9 341 234-5678",
-  },
-  {
-    id: "3",
-    victimName: "Ana Sofía Martínez",
-    incidentDate: "2024-01-20",
-    location: "Córdoba Capital",
-    province: "Córdoba",
-    status: "Juicio oral",
-    familyContactName: "Roberto Martínez",
-    familyRelationship: "Hermano",
-    familyContactPhone: "+54 9 351 345-6789",
-  },
-  {
-    id: "4",
-    victimName: "Roberto Luis García",
-    incidentDate: "2023-12-10",
-    location: "Mendoza Capital",
-    province: "Mendoza",
-    status: "Condenado",
-    familyContactName: "Carmen García",
-    familyRelationship: "Esposa",
-    familyContactPhone: "+54 9 261 567-8901",
-  },
-  {
-    id: "5",
-    victimName: "Laura Patricia López",
-    incidentDate: "2023-11-05",
-    location: "Tucumán Capital",
-    province: "Tucumán",
-    status: "En investigación",
-    familyContactName: "Miguel López",
-    familyRelationship: "Padre",
-    familyContactPhone: "+54 9 381 678-9012",
-  },
-  {
-    id: "6",
-    victimName: "Diego Alejandro Morales",
-    incidentDate: "2023-10-18",
-    location: "Salta Capital",
-    province: "Salta",
-    status: "Imputado identificado",
-    familyContactName: "Ana Morales",
-    familyRelationship: "Madre",
-    familyContactPhone: "+54 9 387 789-0123",
-  },
-  {
-    id: "7",
-    victimName: "Carmen Rosa Jiménez",
-    incidentDate: "2024-04-02",
-    location: "Mar del Plata, Buenos Aires",
-    province: "Buenos Aires",
-    status: "Procesado",
-    familyContactName: "Luis Jiménez",
-    familyRelationship: "Hijo",
-    familyContactPhone: "+54 9 223 890-1234",
-  },
-  {
-    id: "8",
-    victimName: "José Miguel Torres",
-    incidentDate: "2024-01-15",
-    location: "Santa Fe Capital",
-    province: "Santa Fe",
-    status: "Archivo",
-    familyContactName: "María Torres",
-    familyRelationship: "Hija",
-    familyContactPhone: "+54 9 342 901-2345",
-  },
-  {
-    id: "9",
-    victimName: "Silvia Beatriz Herrera",
-    incidentDate: "2023-09-22",
-    location: "Villa Carlos Paz, Córdoba",
-    province: "Córdoba",
-    status: "Sobreseído",
-    familyContactName: "Pedro Herrera",
-    familyRelationship: "Esposo",
-    familyContactPhone: "+54 9 351 012-3456",
-  },
-  {
-    id: "10",
-    victimName: "Fernando Daniel Castro",
-    incidentDate: "2024-05-10",
-    location: "San Miguel de Tucumán",
-    province: "Tucumán",
-    status: "En investigación",
-    familyContactName: "Rosa Castro",
-    familyRelationship: "Madre",
-    familyContactPhone: "+54 9 381 123-4567",
-  },
-  {
-    id: "11",
-    victimName: "Patricia Mónica Vega",
-    incidentDate: "2024-06-12",
-    location: "Neuquén Capital",
-    province: "Neuquén",
-    status: "Procesado",
-    familyContactName: "Carlos Vega",
-    familyRelationship: "Hermano",
-    familyContactPhone: "+54 9 299 234-5678",
-  },
-  {
-    id: "12",
-    victimName: "Andrés Felipe Ruiz",
-    incidentDate: "2024-07-08",
-    location: "Posadas, Misiones",
-    province: "Misiones",
-    status: "En investigación",
-    familyContactName: "Marta Ruiz",
-    familyRelationship: "Madre",
-    familyContactPhone: "+54 9 376 345-6789",
-  },
-]
+interface CaseData {
+  id: string
+  victimName: string
+  incidentDate: string
+  location: string
+  province: string
+  status: string
+  familyContactName: string
+  familyRelationship: string
+  familyContactPhone: string
+}
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -159,13 +37,15 @@ const getStatusColor = (status: string) => {
       return "bg-slate-100 text-slate-800 border-slate-200"
     case "Archivo":
       return "bg-red-100 text-red-800 border-red-200"
+    case "Prescripción":
+      return "bg-purple-100 text-purple-800 border-purple-200"
     default:
       return "bg-gray-100 text-gray-800 border-gray-200"
   }
 }
 
 interface CaseCardProps {
-  case: (typeof mockCases)[0]
+  case: CaseData
 }
 
 function CaseCard({ case: caseData }: CaseCardProps) {
@@ -207,13 +87,13 @@ function CaseCard({ case: caseData }: CaseCardProps) {
 }
 
 interface ScrollingRowProps {
-  cases: typeof mockCases
+  cases: CaseData[]
   direction: "left" | "right"
   speed: number
 }
 
 function ScrollingRow({ cases, direction, speed }: ScrollingRowProps) {
-  const [duplicatedCases, setDuplicatedCases] = useState<typeof mockCases>([])
+  const [duplicatedCases, setDuplicatedCases] = useState<CaseData[]>([])
 
   useEffect(() => {
     // Duplicate cases to create seamless loop
@@ -237,24 +117,124 @@ function ScrollingRow({ cases, direction, speed }: ScrollingRowProps) {
 }
 
 export function AnimatedCasesGrid() {
-  const [rows, setRows] = useState<(typeof mockCases)[]>([])
+  const [cases, setCases] = useState<CaseData[]>([])
+  const [rows, setRows] = useState<CaseData[][]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const supabase = createClient()
 
   useEffect(() => {
-    // Split cases into multiple rows
-    const chunkSize = 4
-    const caseRows = []
-    for (let i = 0; i < mockCases.length; i += chunkSize) {
-      caseRows.push(mockCases.slice(i, i + chunkSize))
-    }
-    setRows(caseRows)
+    fetchCases()
   }, [])
+
+  useEffect(() => {
+    if (cases.length > 0) {
+      // Split cases into multiple rows
+      const chunkSize = 4
+      const caseRows = []
+      for (let i = 0; i < cases.length; i += chunkSize) {
+        caseRows.push(cases.slice(i, i + chunkSize))
+      }
+      setRows(caseRows)
+    }
+  }, [cases])
+
+  const fetchCases = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      const { data: victimData, error: victimError } = await supabase
+        .from("victimas")
+        .select(`
+          id,
+          nombre_completo,
+          telefono_contacto_familiar,
+          hechos (
+            id,
+            fecha_hecho,
+            lugar_especifico,
+            provincia
+          )
+        `)
+        .limit(12)
+
+      if (victimError) throw victimError
+
+      const { data: seguimientoData, error: seguimientoError } = await supabase
+        .from("seguimiento")
+        .select("hecho_id, contacto_familia")
+
+      if (seguimientoError) throw seguimientoError
+
+      const { data: imputadosData, error: imputadosError } = await supabase
+        .from("imputados")
+        .select("hecho_id, estado_procesal")
+
+      if (imputadosError) throw imputadosError
+
+      // Transform data to match component interface
+      const transformedCases: CaseData[] = victimData.map((victim: any) => {
+        const incident = victim.hechos?.[0] || {}
+        const followUp = seguimientoData?.find((s) => s.hecho_id === incident.id) || {}
+        const imputado = imputadosData?.find((i) => i.hecho_id === incident.id) || {}
+
+        // Parse family contact to extract name and relationship
+        const familyContactParts = followUp.contacto_familia?.split(" - ") || ["", ""]
+
+        return {
+          id: victim.id,
+          victimName: victim.nombre_completo,
+          incidentDate: incident.fecha_hecho || new Date().toISOString(),
+          location: incident.lugar_especifico || "No especificado",
+          province: incident.provincia || "No especificado",
+          status: imputado.estado_procesal || "En investigación",
+          familyContactName: familyContactParts[0] || "No especificado",
+          familyRelationship: familyContactParts[1] || "Familiar",
+          familyContactPhone: victim.telefono_contacto_familiar || "No especificado",
+        }
+      })
+
+      setCases(transformedCases)
+    } catch (err) {
+      console.error("Error fetching cases:", err)
+      setError("Error al cargar los casos")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <span className="ml-2 text-slate-600">Cargando casos...</span>
+      </div>
+    )
+  }
+
+  if (error || cases.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-3xl font-bold text-slate-900 font-heading mb-4">Casos Recientes</h2>
+        <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-8">
+          {error || "No hay casos disponibles para mostrar"}
+        </p>
+        {error && (
+          <button onClick={fetchCases} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            Reintentar
+          </button>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8 py-8">
       <div className="text-center mb-12">
         <h2 className="text-3xl font-bold text-slate-900 font-heading mb-4">Casos Recientes</h2>
         <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-          Observatorio de víctimas - Seguimiento continuo de casos de violencia institucional
+          Base de datos de víctimas - Seguimiento continuo de casos de violencia institucional
         </p>
       </div>
 

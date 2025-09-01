@@ -60,8 +60,8 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
             <Input
               id="incidentDate"
               type="date"
-              value={data.date || ""}
-              onChange={(e) => handleChange("date", e.target.value)}
+              value={data.fechaHecho || ""}
+              onChange={(e) => handleChange("fechaHecho", e.target.value)}
               className="border-slate-300"
             />
           </div>
@@ -73,29 +73,16 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
             <Input
               id="deathDate"
               type="date"
-              value={data.deathDate || ""}
-              onChange={(e) => handleChange("deathDate", e.target.value)}
+              value={data.fechaFallecimiento || ""}
+              onChange={(e) => handleChange("fechaFallecimiento", e.target.value)}
               className="border-slate-300"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="incidentTime" className="text-sm font-medium text-slate-700">
-              Hora Aproximada
-            </Label>
-            <Input
-              id="incidentTime"
-              type="time"
-              value={data.time || ""}
-              onChange={(e) => handleChange("time", e.target.value)}
-              className="border-slate-300"
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label className="text-sm font-medium text-slate-700">Provincia</Label>
-            <Select value={data.province || ""} onValueChange={(value) => handleChange("province", value)}>
+            <Select value={data.provincia || ""} onValueChange={(value) => handleChange("provincia", value)}>
               <SelectTrigger className="border-slate-300">
                 <SelectValue placeholder="Seleccionar provincia" />
               </SelectTrigger>
@@ -116,8 +103,8 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
             <Input
               id="incidentCity"
               placeholder="Ciudad o localidad"
-              value={data.city || ""}
-              onChange={(e) => handleChange("city", e.target.value)}
+              value={data.ciudad || ""}
+              onChange={(e) => handleChange("ciudad", e.target.value)}
               className="border-slate-300"
             />
           </div>
@@ -129,8 +116,8 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
             <Input
               id="municipality"
               placeholder="Municipio donde sucedieron los hechos"
-              value={data.municipality || ""}
-              onChange={(e) => handleChange("municipality", e.target.value)}
+              value={data.municipio || ""}
+              onChange={(e) => handleChange("municipio", e.target.value)}
               className="border-slate-300"
             />
           </div>
@@ -138,7 +125,7 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
 
         <div className="mt-4 space-y-2">
           <Label className="text-sm font-medium text-slate-700">Lugar Específico del Hecho</Label>
-          <Select value={data.locationType || ""} onValueChange={(value) => handleChange("locationType", value)}>
+          <Select value={data.tipoLugar || ""} onValueChange={(value) => handleChange("tipoLugar", value)}>
             <SelectTrigger className="border-slate-300">
               <SelectValue placeholder="Seleccionar tipo de lugar" />
             </SelectTrigger>
@@ -150,11 +137,11 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
               ))}
             </SelectContent>
           </Select>
-          {data.locationType === "Otro" && (
+          {data.tipoLugar === "Otro" && (
             <Input
               placeholder="Especificar otro lugar"
-              value={data.locationOther || ""}
-              onChange={(e) => handleChange("locationOther", e.target.value)}
+              value={data.lugarOtro || ""}
+              onChange={(e) => handleChange("lugarOtro", e.target.value)}
               className="border-slate-300 mt-2"
             />
           )}
@@ -167,8 +154,8 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
           <Textarea
             id="incidentSummary"
             placeholder="Descripción detallada de lo ocurrido"
-            value={data.summary || ""}
-            onChange={(e) => handleChange("summary", e.target.value)}
+            value={data.resumenHecho || ""}
+            onChange={(e) => handleChange("resumenHecho", e.target.value)}
             className="border-slate-300"
             rows={4}
           />
@@ -185,8 +172,8 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
               <Input
                 id="caseNumber"
                 placeholder="IPP N° o número de causa"
-                value={data.caseNumber || ""}
-                onChange={(e) => handleChange("caseNumber", e.target.value)}
+                value={data.numeroCausa || ""}
+                onChange={(e) => handleChange("numeroCausa", e.target.value)}
                 className="border-slate-300"
               />
             </div>
@@ -198,8 +185,8 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
               <Input
                 id="caseTitle"
                 placeholder="Carátula de la causa"
-                value={data.caseTitle || ""}
-                onChange={(e) => handleChange("caseTitle", e.target.value)}
+                value={data.caratula || ""}
+                onChange={(e) => handleChange("caratula", e.target.value)}
                 className="border-slate-300"
               />
             </div>
@@ -211,8 +198,8 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
               <Input
                 id="prosecutor"
                 placeholder="Nombre del fiscal"
-                value={data.prosecutor || ""}
-                onChange={(e) => handleChange("prosecutor", e.target.value)}
+                value={data.fiscalCargo || ""}
+                onChange={(e) => handleChange("fiscalCargo", e.target.value)}
                 className="border-slate-300"
               />
             </div>
@@ -225,8 +212,8 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
                 id="prosecutorEmail"
                 type="email"
                 placeholder="email@fiscalia.gov.ar"
-                value={data.prosecutorEmail || ""}
-                onChange={(e) => handleChange("prosecutorEmail", e.target.value)}
+                value={data.emailFiscalia || ""}
+                onChange={(e) => handleChange("emailFiscalia", e.target.value)}
                 className="border-slate-300"
               />
             </div>
@@ -238,8 +225,8 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
               <Input
                 id="prosecutorPhone"
                 placeholder="+54 11 1234-5678"
-                value={data.prosecutorPhone || ""}
-                onChange={(e) => handleChange("prosecutorPhone", e.target.value)}
+                value={data.telefonoFiscalia || ""}
+                onChange={(e) => handleChange("telefonoFiscalia", e.target.value)}
                 className="border-slate-300"
               />
             </div>
