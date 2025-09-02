@@ -76,13 +76,16 @@ export function CasesGrid({ filters = {} }: CasesGridProps) {
           nombre_completo,
           telefono_contacto_familiar,
           hechos (
+            id,
             fecha_hecho,
-            lugar_hecho,
+            lugar_especifico,
             provincia,
-            estado_legal
-          ),
-          seguimiento (
-            contacto_familiar
+            seguimiento (
+              contacto_familia
+            ),
+            imputados (
+              estado_procesal
+            )
           )
         `)
 
@@ -91,18 +94,19 @@ export function CasesGrid({ filters = {} }: CasesGridProps) {
       // Transform data to match component interface
       const transformedCases: CaseData[] = victimData.map((victim: any) => {
         const incident = victim.hechos?.[0] || {}
-        const followUp = victim.seguimiento?.[0] || {}
+        const followUp = incident.seguimiento?.[0] || {}
+        const imputado = incident.imputados?.[0] || {}
 
         // Parse family contact to extract name and relationship
-        const familyContactParts = followUp.contacto_familiar?.split(" - ") || ["", ""]
+        const familyContactParts = followUp.contacto_familia?.split(" - ") || ["", ""]
 
         return {
           id: victim.id,
           victimName: victim.nombre_completo,
           incidentDate: incident.fecha_hecho || new Date().toISOString(),
-          location: incident.lugar_hecho || "No especificado",
+          location: incident.lugar_especifico || "No especificado",
           province: incident.provincia || "No especificado",
-          status: incident.estado_legal || "En investigación",
+          status: imputado.estado_procesal || "En investigación",
           familyContactName: familyContactParts[0] || "No especificado",
           familyRelationship: familyContactParts[1] || "Familiar",
           familyContactPhone: victim.telefono_contacto_familiar || "No especificado",

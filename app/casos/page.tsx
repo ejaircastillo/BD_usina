@@ -128,29 +128,23 @@ export default function CasosPage() {
             id,
             fecha_hecho,
             lugar_especifico,
-            provincia
+            provincia,
+            seguimiento (
+              contacto_familia
+            ),
+            imputados (
+              estado_procesal
+            )
           )
         `)
 
       if (victimError) throw victimError
 
-      const { data: seguimientoData, error: seguimientoError } = await supabase
-        .from("seguimiento")
-        .select("hecho_id, contacto_familia")
-
-      if (seguimientoError) throw seguimientoError
-
-      const { data: imputadosData, error: imputadosError } = await supabase
-        .from("imputados")
-        .select("hecho_id, estado_procesal")
-
-      if (imputadosError) throw imputadosError
-
       // Transform data to match component interface
       const transformedCases: CaseData[] = victimData.map((victim: any) => {
         const incident = victim.hechos?.[0] || {}
-        const followUp = seguimientoData?.find((s) => s.hecho_id === incident.id) || {}
-        const imputado = imputadosData?.find((i) => i.hecho_id === incident.id) || {}
+        const followUp = incident.seguimiento?.[0] || {}
+        const imputado = incident.imputados?.[0] || {}
 
         // Parse family contact to extract name and relationship
         const familyContactParts = followUp.contacto_familia?.split(" - ") || ["", ""]
