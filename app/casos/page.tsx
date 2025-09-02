@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, User, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { MapPin, User, Loader2, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { CasesFilters } from "@/components/cases/cases-filters"
 
@@ -261,6 +261,15 @@ export default function CasosPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
+        <div className="flex items-center gap-4 mb-6">
+          <Link href="/">
+            <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+              <ArrowLeft className="w-4 h-4" />
+              Volver al Inicio
+            </Button>
+          </Link>
+        </div>
+
         <h1 className="text-3xl font-bold text-slate-900 font-heading mb-2">Todos los Casos</h1>
         <p className="text-lg text-slate-600">
           Base de datos completa de víctimas - {filteredCases.length} casos encontrados
