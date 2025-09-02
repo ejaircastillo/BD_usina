@@ -74,39 +74,54 @@ export function CasesGrid({ filters = {} }: CasesGridProps) {
       const { data: victimData, error: victimError } = await supabase.from("victimas").select(`
           id,
           nombre_completo,
-          telefono_contacto_familiar,
-          hechos (
-            id,
-            fecha_hecho,
-            lugar_especifico,
-            provincia,
-            seguimiento (
-              contacto_familia
-            ),
-            imputados (
-              estado_procesal
-            )
-          )
+          telefono_contacto_familiar
         `)
 
       if (victimError) throw victimError
 
-      // Transform data to match component interface
+      // Get related data separately to avoid complex join issues
+      const { data: hechosData, error: hechosError } = await supabase.from("hechos").select(`
+          id,
+          victima_id,
+          fecha_hecho,
+          lugar_especifico,
+          provincia
+        `)
+
+      if (hechosError) throw hechosError
+
+      const { data: seguimientoData, error: seguimientoError } = await supabase.from("seguimiento").select(`
+          hecho_id,
+          contacto_familia
+        `)
+
+      if (seguimientoError) throw seguimientoError
+
+      const { data: imputadosData, error: imputadosError } = await supabase.from("imputados").select(`
+          hecho_id,
+          estado_procesal
+        `)
+
+      if (imputadosError) throw imputadosError
+
       const transformedCases: CaseData[] = victimData.map((victim: any) => {
-        const incident = victim.hechos?.[0] || {}
-        const followUp = incident.seguimiento?.[0] || {}
-        const imputado = incident.imputados?.[0] || {}
+        // Find related hecho for this victim
+        const hecho = hechosData.find((h: any) => h.victima_id === victim.id)
+
+        // Find related seguimiento and imputado for this hecho
+        const seguimiento = hecho ? seguimientoData.find((s: any) => s.hecho_id === hecho.id) : null
+        const imputado = hecho ? imputadosData.find((i: any) => i.hecho_id === hecho.id) : null
 
         // Parse family contact to extract name and relationship
-        const familyContactParts = followUp.contacto_familia?.split(" - ") || ["", ""]
+        const familyContactParts = seguimiento?.contacto_familia?.split(" - ") || ["", ""]
 
         return {
           id: victim.id,
           victimName: victim.nombre_completo,
-          incidentDate: incident.fecha_hecho || new Date().toISOString(),
-          location: incident.lugar_especifico || "No especificado",
-          province: incident.provincia || "No especificado",
-          status: imputado.estado_procesal || "En investigación",
+          incidentDate: hecho?.fecha_hecho || new Date().toISOString(),
+          location: hecho?.lugar_especifico || "No especificado",
+          province: hecho?.provincia || "No especificado",
+          status: imputado?.estado_procesal || "En investigación",
           familyContactName: familyContactParts[0] || "No especificado",
           familyRelationship: familyContactParts[1] || "Familiar",
           familyContactPhone: victim.telefono_contacto_familiar || "No especificado",
