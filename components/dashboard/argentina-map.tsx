@@ -48,10 +48,11 @@ const getPointSize = (cases: number) => {
 }
 
 const getPointColor = (cases: number) => {
-  if (cases > 200) return "bg-red-500"
+  /* Updated map point colors to match new brand palette */
+  if (cases > 200) return "bg-red-600"
   if (cases > 100) return "bg-orange-500"
-  if (cases > 50) return "bg-yellow-500"
-  return "bg-blue-500"
+  if (cases > 50) return "bg-blue-500"
+  return "bg-blue-300"
 }
 
 export function ArgentinaMap() {
@@ -194,7 +195,7 @@ export function ArgentinaMap() {
               <h4 className="font-medium text-slate-900 mb-3 font-heading">Leyenda</h4>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
-                  <div className="w-4 h-4 bg-red-500 rounded-full"></div>
+                  <div className="w-4 h-4 bg-red-600 rounded-full"></div>
                   <span className="text-slate-600">Más de 200 casos</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
@@ -202,11 +203,11 @@ export function ArgentinaMap() {
                   <span className="text-slate-600">100-200 casos</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                   <span className="text-slate-600">50-100 casos</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                  <div className="w-1.5 h-1.5 bg-blue-300 rounded-full"></div>
                   <span className="text-slate-600">Menos de 50 casos</span>
                 </div>
               </div>
