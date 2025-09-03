@@ -31,6 +31,7 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
       fechaVeredicto: "",
       pena: "",
       juicioAbreviado: false,
+      prisionPerpetua: false, // Added Prisión Perpetua field
       cargos: "",
       resources: [],
     }
@@ -306,6 +307,17 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                     />
                     <Label htmlFor={`abbreviated-${accused.id}`} className="text-sm font-medium text-slate-700">
                       Juicio Abreviado
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`life-sentence-${accused.id}`}
+                      checked={accused.prisionPerpetua || false}
+                      onCheckedChange={(checked) => updateAccused(accused.id, "prisionPerpetua", checked)}
+                    />
+                    <Label htmlFor={`life-sentence-${accused.id}`} className="text-sm font-medium text-slate-700">
+                      Prisión Perpetua
                     </Label>
                   </div>
                 </div>
