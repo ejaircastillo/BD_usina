@@ -109,7 +109,7 @@ export function CasesByYearChart() {
               />
               <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${value}`} />
               <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-              <Bar dataKey="cases" fill="var(--color-cases)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="cases" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartContainer>
