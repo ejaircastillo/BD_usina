@@ -58,10 +58,14 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             recursos (*)
           )
         `)
-        .eq("hechos.id", caseId)
+        .eq("id", caseId)
         .single()
 
       if (victimError) throw victimError
+
+      if (!victimData.hechos || victimData.hechos.length === 0) {
+        throw new Error("No se encontraron hechos asociados a esta víctima")
+      }
 
       const hecho = victimData.hechos[0]
 
@@ -69,7 +73,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         victim: {
           nombreCompleto: victimData.nombre_completo || "",
           fechaNacimiento: victimData.fecha_nacimiento || "",
-          edad: victimData.edad || "",
+          edad: victimData.edad?.toString() || "",
           profesion: victimData.profesion || "",
           redesSociales: victimData.redes_sociales || "",
           telefonoContactoFamiliar: victimData.telefono_contacto_familiar || "",
@@ -101,6 +105,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             juicioAbreviado: imputado.juicio_abreviado || false,
             fechasJuicio:
               imputado.fechas_juicio?.map((fecha: any) => ({
+                id: fecha.id,
                 fecha: fecha.fecha || "",
                 descripcion: fecha.descripcion || "",
               })) || [],
@@ -126,6 +131,13 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             fuente: recurso.fuente || "",
             descripcion: recurso.descripcion || "",
           })) || [],
+      })
+
+      console.log("[v0] Datos cargados correctamente:", {
+        victimId: caseId,
+        hechoId: hecho?.id,
+        imputadosCount: hecho?.imputados?.length || 0,
+        recursosCount: hecho?.recursos?.length || 0,
       })
     } catch (error) {
       console.error("Error loading case data:", error)
@@ -160,7 +172,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           .update({
             nombre_completo: formData.victim.nombreCompleto,
             fecha_nacimiento: formData.victim.fechaNacimiento || null,
-            edad: formData.victim.edad || null,
+            edad: formData.victim.edad ? Number.parseInt(formData.victim.edad) : null,
             profesion: formData.victim.profesion || null,
             redes_sociales: formData.victim.redesSociales || null,
             telefono_contacto_familiar: formData.victim.telefonoContactoFamiliar || null,
@@ -171,6 +183,16 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           .eq("id", caseId)
 
         if (victimError) throw victimError
+
+        const { data: hechoData, error: hechoSelectError } = await supabase
+          .from("hechos")
+          .select("id")
+          .eq("victima_id", caseId)
+          .single()
+
+        if (hechoSelectError) throw hechoSelectError
+
+        const hechoId = hechoData.id
 
         const { error: incidentError } = await supabase
           .from("hechos")
@@ -186,11 +208,11 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             email_fiscalia: formData.incident.emailFiscalia || null,
             telefono_fiscalia: formData.incident.telefonoFiscalia || null,
           })
-          .eq("victima_id", caseId)
+          .eq("id", hechoId)
 
         if (incidentError) throw incidentError
 
-        await supabase.from("imputados").delete().eq("hecho_id", caseId)
+        await supabase.from("imputados").delete().eq("hecho_id", hechoId)
 
         if (formData.accused && Array.isArray(formData.accused) && formData.accused.length > 0) {
           for (const accused of formData.accused) {
@@ -199,7 +221,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 .from("imputados")
                 .insert([
                   {
-                    hecho_id: caseId,
+                    hecho_id: hechoId,
                     apellido_nombre: accused.apellidoNombre,
                     menor_edad: accused.menorEdad || false,
                     nacionalidad: accused.nacionalidad || null,
@@ -231,11 +253,11 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         }
 
-        await supabase.from("seguimiento").delete().eq("hecho_id", caseId)
+        await supabase.from("seguimiento").delete().eq("hecho_id", hechoId)
         if (Object.keys(formData.followUp).length > 0) {
           await supabase.from("seguimiento").insert([
             {
-              hecho_id: caseId,
+              hecho_id: hechoId,
               miembro_asignado: formData.followUp.miembroAsignado || null,
               contacto_familia: formData.followUp.contactoFamilia || null,
               parentesco: formData.followUp.parentesco || null,
@@ -250,13 +272,13 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           ])
         }
 
-        await supabase.from("recursos").delete().eq("hecho_id", caseId)
+        await supabase.from("recursos").delete().eq("hecho_id", hechoId)
         if (formData.resources && Array.isArray(formData.resources) && formData.resources.length > 0) {
           for (const resource of formData.resources) {
             if (resource.titulo || resource.url) {
               await supabase.from("recursos").insert([
                 {
-                  hecho_id: caseId,
+                  hecho_id: hechoId,
                   tipo: resource.tipo || null,
                   titulo: resource.titulo || null,
                   url: resource.url || null,
@@ -274,7 +296,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             {
               nombre_completo: formData.victim.nombreCompleto,
               fecha_nacimiento: formData.victim.fechaNacimiento || null,
-              edad: formData.victim.edad || null,
+              edad: formData.victim.edad ? Number.parseInt(formData.victim.edad) : null,
               profesion: formData.victim.profesion || null,
               redes_sociales: formData.victim.redesSociales || null,
               telefono_contacto_familiar: formData.victim.telefonoContactoFamiliar || null,
