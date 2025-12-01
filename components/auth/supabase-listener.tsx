@@ -1,11 +1,11 @@
-"use client" // Esto lo convierte en un Componente de Cliente. Es crucial.
+"use client"
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { createClient } from "@/lib/supabase/client"
 
 export function SupabaseListener() {
-  const supabase = createClientComponentClient()
+  const supabase = createClient()
   const router = useRouter()
 
   useEffect(() => {
@@ -14,7 +14,6 @@ export function SupabaseListener() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      // Esta línea nos dirá exactamente qué evento está ocurriendo
       console.log("Evento de Supabase Auth detectado:", event)
 
       if (event === "PASSWORD_RECOVERY") {
@@ -23,12 +22,10 @@ export function SupabaseListener() {
       }
     })
 
-    // Limpiar el escuchador cuando el componente ya no se use
     return () => {
       subscription?.unsubscribe()
     }
   }, [supabase, router])
 
-  // Este componente no renderiza nada visible, solo ejecuta la lógica.
   return null
 }
