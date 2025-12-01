@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -19,6 +19,8 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [emailSent, setEmailSent] = useState(false)
   const [authState, setAuthState] = useState<"checking" | "processing_token" | "ready">("checking")
+  const [isRedirecting, setIsRedirecting] = useState(false)
+  const hasRedirectedRef = useRef(false)
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -33,11 +35,11 @@ export default function LoginPage() {
     return !!(code || token || hasHashTokens)
   }, [searchParams])
 
-  const redirectToDashboard = useCallback(() => {
-    router.replace("/dashboard")
-  }, [router])
-
   useEffect(() => {
+    if (isRedirecting || hasRedirectedRef.current) {
+      return
+    }
+
     let isMounted = true
     let timeoutId: NodeJS.Timeout
 
@@ -45,29 +47,43 @@ export default function LoginPage() {
       setAuthState("processing_token")
     }
 
+    const performRedirect = async () => {
+      if (hasRedirectedRef.current || isRedirecting) {
+        return
+      }
+
+      hasRedirectedRef.current = true
+      setIsRedirecting(true)
+
+      router.refresh()
+
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      router.replace("/dashboard")
+    }
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("[v0] Auth state change:", event, !!session)
+      if (hasRedirectedRef.current) {
+        return
+      }
 
       if (timeoutId) {
         clearTimeout(timeoutId)
       }
 
-      if (event === "SIGNED_IN" && session) {
-        console.log("[v0] SIGNED_IN detectado, redirigiendo...")
-        redirectToDashboard()
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
+        performRedirect()
         return
       }
 
-      // Si recibimos INITIAL_SESSION sin sesión y no hay tokens, mostrar formulario
       if (event === "INITIAL_SESSION" && !session && !hasAuthParams) {
         if (isMounted) {
           setAuthState("ready")
         }
       }
 
-      // Si hay error en el token o sesión inválida
       if (event === "SIGNED_OUT" || (event === "INITIAL_SESSION" && !session && hasAuthParams)) {
         if (isMounted) {
           setAuthState("ready")
@@ -79,15 +95,14 @@ export default function LoginPage() {
     })
 
     const checkSession = async () => {
-      try {
-        // Si hay tokens en URL, dar tiempo a Supabase para procesarlos
-        if (hasAuthParams) {
-          console.log("[v0] Tokens detectados, esperando procesamiento...")
+      if (hasRedirectedRef.current) {
+        return
+      }
 
-          // Timeout de seguridad
+      try {
+        if (hasAuthParams) {
           timeoutId = setTimeout(() => {
-            if (isMounted) {
-              console.log("[v0] Timeout: tokens no procesados")
+            if (isMounted && !hasRedirectedRef.current) {
               setAuthState("ready")
               setError("El enlace ha expirado o es inválido. Solicita uno nuevo.")
             }
@@ -96,27 +111,23 @@ export default function LoginPage() {
           return
         }
 
-        // Sin tokens, verificar sesión existente
         const {
           data: { session },
           error: sessionError,
         } = await supabase.auth.getSession()
 
         if (sessionError) {
-          console.log("[v0] Error al obtener sesión:", sessionError.message)
           if (isMounted) setAuthState("ready")
           return
         }
 
         if (session) {
-          console.log("[v0] Sesión activa encontrada")
-          redirectToDashboard()
+          performRedirect()
           return
         }
 
         if (isMounted) setAuthState("ready")
       } catch (err) {
-        console.log("[v0] Error en checkSession:", err)
         if (isMounted) setAuthState("ready")
       }
     }
@@ -128,7 +139,7 @@ export default function LoginPage() {
       if (timeoutId) clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
-  }, [supabase, redirectToDashboard, hasAuthParams])
+  }, [supabase, hasAuthParams, router, isRedirecting])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
