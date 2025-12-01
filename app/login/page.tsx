@@ -47,7 +47,7 @@ export default function LoginPage() {
       setAuthState("processing_token")
     }
 
-    const performRedirect = async () => {
+    const performRedirect = () => {
       if (hasRedirectedRef.current || isRedirecting) {
         return
       }
@@ -55,11 +55,8 @@ export default function LoginPage() {
       hasRedirectedRef.current = true
       setIsRedirecting(true)
 
-      router.refresh()
-
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
-      router.replace("/dashboard")
+      // Forzar recarga completa para asegurar que el Middleware vea las cookies
+      window.location.href = "/dashboard"
     }
 
     const {
