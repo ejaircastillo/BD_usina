@@ -2,8 +2,9 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { useEffect, useState, useRef } from "react"
+import { usePathname } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -11,29 +12,74 @@ interface AuthGuardProps {
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
-  const router = useRouter()
   const pathname = usePathname()
+  const hasRedirectedRef = useRef(false)
+  const supabase = createClient()
 
   useEffect(() => {
-    const checkAuth = () => {
-      const authStatus = localStorage.getItem("isAuthenticated")
-      const isAuth = authStatus === "true"
-      setIsAuthenticated(isAuth)
+    if (hasRedirectedRef.current) return
 
-      // If not authenticated and not on login page, redirect to login
-      if (!isAuth && pathname !== "/login") {
-        router.push("/login")
-      }
-      // If authenticated and on login page, redirect to home
-      else if (isAuth && pathname === "/login") {
-        router.push("/")
+    let isMounted = true
+
+    const checkAuth = async () => {
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession()
+
+        if (!isMounted) return
+
+        const isAuth = !!session && !error
+        setIsAuthenticated(isAuth)
+
+        // Si no está autenticado y no está en login, redirigir a login
+        if (!isAuth && pathname !== "/login") {
+          hasRedirectedRef.current = true
+          window.location.href = "/login"
+          return
+        }
+
+        // Si está autenticado y está en login, redirigir a dashboard
+        if (isAuth && pathname === "/login") {
+          hasRedirectedRef.current = true
+          window.location.href = "/dashboard"
+          return
+        }
+      } catch (err) {
+        if (isMounted) {
+          setIsAuthenticated(false)
+          if (pathname !== "/login") {
+            hasRedirectedRef.current = true
+            window.location.href = "/login"
+          }
+        }
       }
     }
 
-    checkAuth()
-  }, [router, pathname])
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted || hasRedirectedRef.current) return
 
-  // Show loading while checking authentication
+      const isAuth = !!session
+      setIsAuthenticated(isAuth)
+
+      if (event === "SIGNED_OUT" && pathname !== "/login") {
+        hasRedirectedRef.current = true
+        window.location.href = "/login"
+      }
+    })
+
+    checkAuth()
+
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
+  }, [supabase, pathname])
+
+  // Mostrar loading mientras verifica autenticación
   if (isAuthenticated === null) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -45,16 +91,16 @@ export function AuthGuard({ children }: AuthGuardProps) {
     )
   }
 
-  // If on login page, always show the page
+  // Si está en la página de login, siempre mostrar
   if (pathname === "/login") {
     return <>{children}</>
   }
 
-  // If authenticated, show the protected content
+  // Si está autenticado, mostrar contenido protegido
   if (isAuthenticated) {
     return <>{children}</>
   }
 
-  // If not authenticated, show nothing (redirect will happen)
+  // Si no está autenticado, no mostrar nada (la redirección ocurrirá)
   return null
 }
