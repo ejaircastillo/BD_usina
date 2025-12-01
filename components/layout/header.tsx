@@ -1,19 +1,19 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { LogOut, BarChart3 } from "lucide-react"
 import Image from "next/image"
+import { createClient } from "@/lib/supabase/client"
 
 export function Header() {
   const pathname = usePathname()
-  const router = useRouter()
+  const supabase = createClient()
 
-  const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated")
-    localStorage.removeItem("userEmail")
-    router.push("/login")
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    window.location.href = "/login"
   }
 
   return (
