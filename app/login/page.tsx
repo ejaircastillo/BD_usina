@@ -2,7 +2,8 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,7 +18,48 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [emailSent, setEmailSent] = useState(false)
+  const [isCheckingSession, setIsCheckingSession] = useState(true)
+
+  const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (session) {
+        router.replace("/dashboard")
+        return
+      }
+      setIsCheckingSession(false)
+    }
+
+    checkSession()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        router.replace("/dashboard")
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [supabase, router])
+
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
+          <p className="text-slate-600">Verificando sesión...</p>
+        </div>
+      </div>
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,7 +94,6 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
           <CardHeader className="space-y-6 pb-8 pt-8">
-            {/* Logo */}
             <div className="flex justify-center">
               <div className="relative w-48 h-16">
                 <Image
@@ -65,7 +106,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Title */}
             <div className="text-center space-y-2">
               <h1 className="text-2xl font-bold text-slate-800 font-montserrat">Acceso Exclusivo</h1>
               <p className="text-slate-600 text-sm">Base de Datos de Víctimas</p>
@@ -95,7 +135,6 @@ export default function LoginPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Email Field */}
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-slate-700 font-medium">
                     Correo Electrónico
@@ -115,7 +154,6 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* Error Message */}
                 {error && (
                   <Alert className="border-red-200 bg-red-50">
                     <AlertDescription className="text-red-700">{error}</AlertDescription>
