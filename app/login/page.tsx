@@ -55,8 +55,7 @@ export default function LoginPage() {
       hasRedirectedRef.current = true
       setIsRedirecting(true)
 
-      // Forzar recarga completa para asegurar que el Middleware vea las cookies
-      window.location.href = "/dashboard"
+      window.location.href = "/"
     }
 
     const {
