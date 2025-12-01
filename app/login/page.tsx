@@ -137,10 +137,14 @@ export default function LoginPage() {
     setEmailSent(false)
 
     try {
+      const redirectUrl = process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL
+        ? `${process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL}/login`
+        : `${window.location.origin}/login`
+
       const { error: authError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/login`,
+          emailRedirectTo: redirectUrl,
         },
       })
 
