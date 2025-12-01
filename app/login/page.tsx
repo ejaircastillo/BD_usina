@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -23,43 +23,105 @@ export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  useEffect(() => {
-    const checkSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      if (session) {
-        router.replace("/dashboard")
-        return
-      }
-      setIsCheckingSession(false)
-    }
+  const redirectToDashboard = useCallback(() => {
+    router.replace("/dashboard")
+  }, [router])
 
-    checkSession()
+  useEffect(() => {
+    let isMounted = true
+    let timeoutId: NodeJS.Timeout
+
+    const initializeAuth = async () => {
+      try {
+        const hashParams = window.location.hash
+        const hasAuthTokens = hashParams.includes("access_token") || hashParams.includes("refresh_token")
+
+        if (hasAuthTokens) {
+          // El listener onAuthStateChange se encargará de la redirección
+          console.log("[v0] Tokens detectados en URL, esperando procesamiento...")
+
+          // Timeout de seguridad: si después de 10 segundos no hay sesión, mostrar formulario
+          timeoutId = setTimeout(() => {
+            if (isMounted) {
+              console.log("[v0] Timeout alcanzado, mostrando formulario")
+              setIsCheckingSession(false)
+              setError("El enlace ha expirado o es inválido. Solicita uno nuevo.")
+            }
+          }, 10000)
+
+          return // No hacer getSession aún, dejar que el listener maneje
+        }
+
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession()
+
+        if (sessionError) {
+          console.log("[v0] Error al obtener sesión:", sessionError.message)
+          if (isMounted) {
+            setIsCheckingSession(false)
+          }
+          return
+        }
+
+        if (session) {
+          console.log("[v0] Sesión activa encontrada, redirigiendo...")
+          redirectToDashboard()
+          return
+        }
+
+        // No hay sesión ni tokens, mostrar formulario
+        if (isMounted) {
+          setIsCheckingSession(false)
+        }
+      } catch (err) {
+        console.log("[v0] Error en initializeAuth:", err)
+        if (isMounted) {
+          setIsCheckingSession(false)
+        }
+      }
+    }
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("[v0] Auth state change:", event, !!session)
+
       if (event === "SIGNED_IN" && session) {
-        router.replace("/dashboard")
+        // Limpiar timeout si existe
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+        }
+        console.log("[v0] SIGNED_IN detectado, redirigiendo...")
+        redirectToDashboard()
+      }
+
+      if (event === "TOKEN_REFRESHED" && !session) {
+        if (isMounted) {
+          setIsCheckingSession(false)
+          setError("Hubo un problema con tu sesión. Por favor, solicita un nuevo enlace.")
+        }
+      }
+
+      if (event === "SIGNED_OUT") {
+        if (isMounted) {
+          setIsCheckingSession(false)
+        }
       }
     })
 
+    // Iniciar verificación
+    initializeAuth()
+
     return () => {
+      isMounted = false
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
       subscription.unsubscribe()
     }
-  }, [supabase, router])
-
-  if (isCheckingSession) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
-          <p className="text-slate-600">Verificando sesión...</p>
-        </div>
-      </div>
-    )
-  }
+  }, [supabase, redirectToDashboard])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
