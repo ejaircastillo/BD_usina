@@ -40,10 +40,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
           return
         }
 
-        // Si está autenticado y está en login, redirigir a dashboard
+        // Si está autenticado y está en login, redirigir a la página principal
         if (isAuth && pathname === "/login") {
           hasRedirectedRef.current = true
-          window.location.href = "/dashboard"
+          window.location.href = "/"
           return
         }
       } catch (err) {
