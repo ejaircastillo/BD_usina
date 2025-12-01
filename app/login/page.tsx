@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useCallback, useMemo } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,10 +18,20 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [emailSent, setEmailSent] = useState(false)
-  const [isCheckingSession, setIsCheckingSession] = useState(true)
+  const [authState, setAuthState] = useState<"checking" | "processing_token" | "ready">("checking")
 
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  const hasAuthParams = useMemo(() => {
+    const code = searchParams.get("code")
+    const token = searchParams.get("token")
+    const hashParams = typeof window !== "undefined" ? window.location.hash : ""
+    const hasHashTokens = hashParams.includes("access_token") || hashParams.includes("refresh_token")
+
+    return !!(code || token || hasHashTokens)
+  }, [searchParams])
 
   const redirectToDashboard = useCallback(() => {
     router.replace("/dashboard")
@@ -31,56 +41,8 @@ export default function LoginPage() {
     let isMounted = true
     let timeoutId: NodeJS.Timeout
 
-    const initializeAuth = async () => {
-      try {
-        const hashParams = window.location.hash
-        const hasAuthTokens = hashParams.includes("access_token") || hashParams.includes("refresh_token")
-
-        if (hasAuthTokens) {
-          // El listener onAuthStateChange se encargará de la redirección
-          console.log("[v0] Tokens detectados en URL, esperando procesamiento...")
-
-          // Timeout de seguridad: si después de 10 segundos no hay sesión, mostrar formulario
-          timeoutId = setTimeout(() => {
-            if (isMounted) {
-              console.log("[v0] Timeout alcanzado, mostrando formulario")
-              setIsCheckingSession(false)
-              setError("El enlace ha expirado o es inválido. Solicita uno nuevo.")
-            }
-          }, 10000)
-
-          return // No hacer getSession aún, dejar que el listener maneje
-        }
-
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession()
-
-        if (sessionError) {
-          console.log("[v0] Error al obtener sesión:", sessionError.message)
-          if (isMounted) {
-            setIsCheckingSession(false)
-          }
-          return
-        }
-
-        if (session) {
-          console.log("[v0] Sesión activa encontrada, redirigiendo...")
-          redirectToDashboard()
-          return
-        }
-
-        // No hay sesión ni tokens, mostrar formulario
-        if (isMounted) {
-          setIsCheckingSession(false)
-        }
-      } catch (err) {
-        console.log("[v0] Error en initializeAuth:", err)
-        if (isMounted) {
-          setIsCheckingSession(false)
-        }
-      }
+    if (hasAuthParams) {
+      setAuthState("processing_token")
     }
 
     const {
@@ -88,40 +50,85 @@ export default function LoginPage() {
     } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("[v0] Auth state change:", event, !!session)
 
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+
       if (event === "SIGNED_IN" && session) {
-        // Limpiar timeout si existe
-        if (timeoutId) {
-          clearTimeout(timeoutId)
-        }
         console.log("[v0] SIGNED_IN detectado, redirigiendo...")
         redirectToDashboard()
+        return
       }
 
-      if (event === "TOKEN_REFRESHED" && !session) {
+      // Si recibimos INITIAL_SESSION sin sesión y no hay tokens, mostrar formulario
+      if (event === "INITIAL_SESSION" && !session && !hasAuthParams) {
         if (isMounted) {
-          setIsCheckingSession(false)
-          setError("Hubo un problema con tu sesión. Por favor, solicita un nuevo enlace.")
+          setAuthState("ready")
         }
       }
 
-      if (event === "SIGNED_OUT") {
+      // Si hay error en el token o sesión inválida
+      if (event === "SIGNED_OUT" || (event === "INITIAL_SESSION" && !session && hasAuthParams)) {
         if (isMounted) {
-          setIsCheckingSession(false)
+          setAuthState("ready")
+          if (hasAuthParams) {
+            setError("El enlace ha expirado o es inválido. Solicita uno nuevo.")
+          }
         }
       }
     })
 
-    // Iniciar verificación
-    initializeAuth()
+    const checkSession = async () => {
+      try {
+        // Si hay tokens en URL, dar tiempo a Supabase para procesarlos
+        if (hasAuthParams) {
+          console.log("[v0] Tokens detectados, esperando procesamiento...")
+
+          // Timeout de seguridad
+          timeoutId = setTimeout(() => {
+            if (isMounted) {
+              console.log("[v0] Timeout: tokens no procesados")
+              setAuthState("ready")
+              setError("El enlace ha expirado o es inválido. Solicita uno nuevo.")
+            }
+          }, 8000)
+
+          return
+        }
+
+        // Sin tokens, verificar sesión existente
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession()
+
+        if (sessionError) {
+          console.log("[v0] Error al obtener sesión:", sessionError.message)
+          if (isMounted) setAuthState("ready")
+          return
+        }
+
+        if (session) {
+          console.log("[v0] Sesión activa encontrada")
+          redirectToDashboard()
+          return
+        }
+
+        if (isMounted) setAuthState("ready")
+      } catch (err) {
+        console.log("[v0] Error en checkSession:", err)
+        if (isMounted) setAuthState("ready")
+      }
+    }
+
+    checkSession()
 
     return () => {
       isMounted = false
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
+      if (timeoutId) clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
-  }, [supabase, redirectToDashboard])
+  }, [supabase, redirectToDashboard, hasAuthParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -133,7 +140,7 @@ export default function LoginPage() {
       const { error: authError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || window.location.origin,
+          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/login`,
         },
       })
 
@@ -149,6 +156,30 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (authState === "checking" || authState === "processing_token") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <div className="relative w-48 h-16 mx-auto">
+            <Image
+              src="/images/logo-usina-justicia.png"
+              alt="Usina de Justicia"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+          <div className="flex items-center justify-center gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+            <span className="text-slate-600 font-medium">
+              {authState === "processing_token" ? "Verificando enlace de acceso..." : "Verificando sesión..."}
+            </span>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
