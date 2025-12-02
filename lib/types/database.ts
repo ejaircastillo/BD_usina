@@ -92,6 +92,10 @@ export interface Recurso {
   descripcion: string | null
   url: string | null
   fuente: string | null
+  archivo_path: string | null
+  archivo_nombre: string | null
+  archivo_tipo: string | null
+  archivo_size: number | null
   created_at: string
   updated_at: string
 }

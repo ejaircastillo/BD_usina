@@ -5,7 +5,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Trash2, ExternalLink } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Plus, Trash2, ExternalLink, Upload, LinkIcon } from "lucide-react"
+import { FileUpload } from "@/components/ui/file-upload"
 
 interface ResourcesFormProps {
   data: any[]
@@ -22,6 +24,11 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
       fuente: "",
       fecha: "",
       descripcion: "",
+      archivo_path: null,
+      archivo_nombre: null,
+      archivo_tipo: null,
+      archivo_size: null,
+      input_mode: "url", // "url" or "file"
     }
     onChange([...data, newResource])
   }
@@ -30,8 +37,45 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
     onChange(data.filter((resource) => resource.id !== id))
   }
 
-  const updateResource = (id: number, field: string, value: string) => {
+  const updateResource = (id: number, field: string, value: any) => {
     onChange(data.map((resource) => (resource.id === id ? { ...resource, [field]: value } : resource)))
+  }
+
+  const handleFileUpload = (
+    id: number,
+    file: { path: string; url: string; name: string; type: string; size: number },
+  ) => {
+    onChange(
+      data.map((resource) =>
+        resource.id === id
+          ? {
+              ...resource,
+              archivo_path: file.path,
+              archivo_nombre: file.name,
+              archivo_tipo: file.type,
+              archivo_size: file.size,
+              url: file.url, // Also set URL for display
+            }
+          : resource,
+      ),
+    )
+  }
+
+  const handleFileRemove = (id: number) => {
+    onChange(
+      data.map((resource) =>
+        resource.id === id
+          ? {
+              ...resource,
+              archivo_path: null,
+              archivo_nombre: null,
+              archivo_tipo: null,
+              archivo_size: null,
+              url: "",
+            }
+          : resource,
+      ),
+    )
   }
 
   return (
@@ -47,7 +91,9 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
       {data.length === 0 ? (
         <div className="text-center py-8 text-slate-500">
           <p>No hay recursos multimedia registrados.</p>
-          <p className="text-sm">Haga clic en "Agregar Recurso" para añadir enlaces a noticias, videos, fotos, etc.</p>
+          <p className="text-sm">
+            Haga clic en "Agregar Recurso" para añadir archivos, enlaces a noticias, videos, fotos, etc.
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -115,28 +161,63 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor={`url-${resource.id}`} className="text-sm font-medium text-slate-700">
-                    URL/Enlace
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id={`url-${resource.id}`}
-                      placeholder="https://ejemplo.com/noticia"
-                      value={resource.url || ""}
-                      onChange={(e) => updateResource(resource.id, "url", e.target.value)}
-                      className="border-slate-300 flex-1"
-                    />
-                    {resource.url && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(resource.url, "_blank")}
-                        className="flex items-center gap-1"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                      </Button>
-                    )}
-                  </div>
+                  <Label className="text-sm font-medium text-slate-700">Archivo o Enlace</Label>
+                  <Tabs
+                    value={resource.input_mode || "url"}
+                    onValueChange={(value) => updateResource(resource.id, "input_mode", value)}
+                    className="w-full"
+                  >
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="url" className="flex items-center gap-2">
+                        <LinkIcon className="w-4 h-4" />
+                        Enlace URL
+                      </TabsTrigger>
+                      <TabsTrigger value="file" className="flex items-center gap-2">
+                        <Upload className="w-4 h-4" />
+                        Subir Archivo
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="url" className="mt-3">
+                      <div className="flex gap-2">
+                        <Input
+                          id={`url-${resource.id}`}
+                          placeholder="https://ejemplo.com/noticia"
+                          value={resource.archivo_path ? "" : resource.url || ""}
+                          onChange={(e) => updateResource(resource.id, "url", e.target.value)}
+                          className="border-slate-300 flex-1"
+                          disabled={!!resource.archivo_path}
+                        />
+                        {resource.url && !resource.archivo_path && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(resource.url, "_blank")}
+                            className="flex items-center gap-1"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="file" className="mt-3">
+                      <FileUpload
+                        folder={`casos/${resource.id}`}
+                        onUpload={(file) => handleFileUpload(resource.id, file)}
+                        onRemove={() => handleFileRemove(resource.id)}
+                        currentFile={
+                          resource.archivo_path
+                            ? {
+                                path: resource.archivo_path,
+                                url: resource.url,
+                                name: resource.archivo_nombre || "Archivo",
+                                type: resource.archivo_tipo || "application/octet-stream",
+                                size: resource.archivo_size || 0,
+                              }
+                            : null
+                        }
+                      />
+                    </TabsContent>
+                  </Tabs>
                 </div>
 
                 <div className="space-y-2">
