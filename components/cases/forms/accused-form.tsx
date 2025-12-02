@@ -6,8 +6,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Trash2, ExternalLink } from "lucide-react"
+import { Plus, Trash2 } from "lucide-react"
 import React from "react"
+import { ResourcesForm } from "./resources-form"
 
 interface AccusedFormProps {
   data: any[]
@@ -27,13 +28,13 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
       menorEdad: false,
       juzgadoUfi: "",
       estadoProcesal: "",
-      trialDates: [], // Changed from single trialDate to array of dates
+      trialDates: [],
       fechaVeredicto: "",
       pena: "",
       juicioAbreviado: false,
-      prisionPerpetua: false, // Added Prisión Perpetua field
+      prisionPerpetua: false,
       cargos: "",
-      resources: [],
+      resources: [], // Resources array for file uploads
     }
     onChange([...data, newAccused])
   }
@@ -71,39 +72,8 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
     }
   }
 
-  const addResource = (accusedId: number) => {
-    const newResource = {
-      id: Date.now(),
-      type: "",
-      title: "",
-      url: "",
-      source: "",
-      date: "",
-      description: "",
-    }
-    const accused = data.find((a) => a.id === accusedId)
-    if (accused) {
-      const updatedResources = [...(accused.resources || []), newResource]
-      updateAccused(accusedId, "resources", updatedResources)
-    }
-  }
-
-  const removeResource = (accusedId: number, resourceId: number) => {
-    const accused = data.find((a) => a.id === accusedId)
-    if (accused) {
-      const updatedResources = (accused.resources || []).filter((r: any) => r.id !== resourceId)
-      updateAccused(accusedId, "resources", updatedResources)
-    }
-  }
-
-  const updateResource = (accusedId: number, resourceId: number, field: string, value: string) => {
-    const accused = data.find((a) => a.id === accusedId)
-    if (accused) {
-      const updatedResources = (accused.resources || []).map((resource: any) =>
-        resource.id === resourceId ? { ...resource, [field]: value } : resource,
-      )
-      updateAccused(accusedId, "resources", updatedResources)
-    }
+  const updateResources = (accusedId: number, resources: any[]) => {
+    updateAccused(accusedId, "resources", resources)
   }
 
   return (
@@ -334,128 +304,14 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                 </div>
 
                 <div className="border-t pt-4 mt-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-md font-semibold text-slate-900 font-heading">Recursos del Imputado</h4>
-                    <Button
-                      onClick={() => addResource(accused.id)}
-                      size="sm"
-                      variant="outline"
-                      className="flex items-center gap-2"
-                    >
-                      <Plus className="w-3 h-3" />
-                      Agregar Recurso
-                    </Button>
-                  </div>
-
-                  {!accused.resources || accused.resources.length === 0 ? (
-                    <div className="text-center py-4 text-slate-500 text-sm">
-                      <p>No hay recursos registrados para este imputado.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {accused.resources.map((resource: any, resourceIndex: number) => (
-                        <Card key={resource.id} className="border-slate-100 bg-slate-50">
-                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-heading">Recurso #{resourceIndex + 1}</CardTitle>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeResource(accused.id, resource.id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50 h-6 w-6 p-0"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              <div className="space-y-1">
-                                <Label className="text-xs font-medium text-slate-600">Tipo</Label>
-                                <Select
-                                  value={resource.type || ""}
-                                  onValueChange={(value) => updateResource(accused.id, resource.id, "type", value)}
-                                >
-                                  <SelectTrigger className="border-slate-300 h-8 text-sm">
-                                    <SelectValue placeholder="Tipo" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="news">Noticia</SelectItem>
-                                    <SelectItem value="video">Video</SelectItem>
-                                    <SelectItem value="photo">Fotografía</SelectItem>
-                                    <SelectItem value="document">Documento</SelectItem>
-                                    <SelectItem value="social">Red Social</SelectItem>
-                                    <SelectItem value="other">Otro</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              <div className="space-y-1">
-                                <Label className="text-xs font-medium text-slate-600">Fecha</Label>
-                                <Input
-                                  type="date"
-                                  value={resource.date || ""}
-                                  onChange={(e) => updateResource(accused.id, resource.id, "date", e.target.value)}
-                                  className="border-slate-300 h-8 text-sm"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="space-y-1">
-                              <Label className="text-xs font-medium text-slate-600">Título</Label>
-                              <Input
-                                placeholder="Título del recurso"
-                                value={resource.title || ""}
-                                onChange={(e) => updateResource(accused.id, resource.id, "title", e.target.value)}
-                                className="border-slate-300 h-8 text-sm"
-                              />
-                            </div>
-
-                            <div className="space-y-1">
-                              <Label className="text-xs font-medium text-slate-600">URL/Enlace</Label>
-                              <div className="flex gap-2">
-                                <Input
-                                  placeholder="https://ejemplo.com"
-                                  value={resource.url || ""}
-                                  onChange={(e) => updateResource(accused.id, resource.id, "url", e.target.value)}
-                                  className="border-slate-300 h-8 text-sm flex-1"
-                                />
-                                {resource.url && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => window.open(resource.url, "_blank")}
-                                    className="h-8 w-8 p-0"
-                                  >
-                                    <ExternalLink className="w-3 h-3" />
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="space-y-1">
-                              <Label className="text-xs font-medium text-slate-600">Fuente</Label>
-                              <Input
-                                placeholder="Medio o fuente"
-                                value={resource.source || ""}
-                                onChange={(e) => updateResource(accused.id, resource.id, "source", e.target.value)}
-                                className="border-slate-300 h-8 text-sm"
-                              />
-                            </div>
-
-                            <div className="space-y-1">
-                              <Label className="text-xs font-medium text-slate-600">Descripción</Label>
-                              <Textarea
-                                placeholder="Descripción del recurso"
-                                value={resource.description || ""}
-                                onChange={(e) => updateResource(accused.id, resource.id, "description", e.target.value)}
-                                className="border-slate-300 text-sm"
-                                rows={2}
-                              />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                  <h4 className="text-md font-semibold text-slate-900 font-heading mb-2">Recursos del Imputado</h4>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Fotos, documentos, noticias y enlaces relacionados con este imputado.
+                  </p>
+                  <ResourcesForm
+                    data={accused.resources || []}
+                    onChange={(resources) => updateResources(accused.id, resources)}
+                  />
                 </div>
               </CardContent>
             </Card>
