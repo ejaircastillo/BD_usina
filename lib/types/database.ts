@@ -79,6 +79,13 @@ export interface Seguimiento {
   abogado_querellante: string | null
   amicus_curiae: boolean | null
   notas_seguimiento: string | null
+  telefono_contacto: string | null
+  email_contacto: string | null
+  direccion_contacto: string | null
+  telefono_miembro: string | null
+  email_miembro: string | null
+  fecha_asignacion: string | null
+  proximas_acciones: string | null
   created_at: string
   updated_at: string
 }
