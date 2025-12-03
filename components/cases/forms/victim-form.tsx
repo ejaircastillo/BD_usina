@@ -3,6 +3,10 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useCountries } from "@/hooks/use-countries"
+import { useArgentinaGeo } from "@/hooks/use-argentina-geo"
+import { Loader2 } from "lucide-react"
 
 interface VictimFormProps {
   data: any
@@ -10,11 +14,26 @@ interface VictimFormProps {
 }
 
 export function VictimForm({ data, onChange }: VictimFormProps) {
+  const { countries, isLoading: isLoadingCountries } = useCountries()
+  const { provincias, municipios, isLoadingProvincias, isLoadingMunicipios, fetchMunicipios } = useArgentinaGeo()
+
   const handleChange = (field: string, value: string) => {
     onChange({
       ...data,
       [field]: value,
     })
+  }
+
+  // Handle provincia change - clear municipio and fetch new list
+  const handleProvinciaResidenciaChange = (provincia: string) => {
+    onChange({
+      ...data,
+      provinciaResidencia: provincia,
+      municipioResidencia: "", // Clear municipio when provincia changes
+    })
+    if (provincia) {
+      fetchMunicipios(provincia)
+    }
   }
 
   return (
@@ -25,7 +44,7 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="victimName" className="text-sm font-medium text-slate-700">
-              Nombre Completo *
+              Nombre Completo
             </Label>
             <Input
               id="victimName"
@@ -51,7 +70,7 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="victimAge" className="text-sm font-medium text-slate-700">
-              Edad *
+              Edad
             </Label>
             <Input
               id="victimAge"
@@ -60,8 +79,32 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
               value={data.edad || ""}
               onChange={(e) => handleChange("edad", e.target.value)}
               className="border-slate-300"
-              required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="victimNationality" className="text-sm font-medium text-slate-700">
+              Nacionalidad
+            </Label>
+            <Select value={data.nacionalidad || ""} onValueChange={(value) => handleChange("nacionalidad", value)}>
+              <SelectTrigger className="border-slate-300">
+                <SelectValue placeholder={isLoadingCountries ? "Cargando países..." : "Seleccionar nacionalidad"} />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {isLoadingCountries ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Cargando...
+                  </div>
+                ) : (
+                  countries.map((country) => (
+                    <SelectItem key={country.nameSpanish} value={country.nameSpanish}>
+                      {country.nameSpanish}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -78,19 +121,6 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="victimPhone" className="text-sm font-medium text-slate-700">
-              Teléfono de Contacto Familiar
-            </Label>
-            <Input
-              id="victimPhone"
-              placeholder="+54 11 1234-5678"
-              value={data.telefonoContactoFamiliar || ""}
-              onChange={(e) => handleChange("telefonoContactoFamiliar", e.target.value)}
-              className="border-slate-300"
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="victimSocialMedia" className="text-sm font-medium text-slate-700">
               Redes Sociales
             </Label>
@@ -102,33 +132,75 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
               className="border-slate-300"
             />
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="victimNationality" className="text-sm font-medium text-slate-700">
-              Nacionalidad
-            </Label>
-            <Input
-              id="victimNationality"
-              placeholder="Nacionalidad"
-              value={data.nacionalidad || ""}
-              onChange={(e) => handleChange("nacionalidad", e.target.value)}
-              className="border-slate-300"
-            />
-          </div>
         </div>
 
-        <div className="mt-4 space-y-2">
-          <Label htmlFor="victimAddress" className="text-sm font-medium text-slate-700">
-            Dirección de Residencia de la Víctima
-          </Label>
-          <Textarea
-            id="victimAddress"
-            placeholder="Calle, número, barrio, ciudad, provincia"
-            value={data.direccionCompleta || ""}
-            onChange={(e) => handleChange("direccionCompleta", e.target.value)}
-            className="border-slate-300"
-            rows={3}
-          />
+        <div className="mt-4">
+          <h4 className="text-sm font-medium text-slate-700 mb-3">Ubicación de Residencia</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="victimProvinciaResidencia" className="text-sm font-medium text-slate-700">
+                Provincia de Residencia
+              </Label>
+              <Select value={data.provinciaResidencia || ""} onValueChange={handleProvinciaResidenciaChange}>
+                <SelectTrigger className="border-slate-300">
+                  <SelectValue placeholder={isLoadingProvincias ? "Cargando provincias..." : "Seleccionar provincia"} />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {isLoadingProvincias ? (
+                    <div className="flex items-center justify-center p-4">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Cargando...
+                    </div>
+                  ) : (
+                    provincias.map((provincia) => (
+                      <SelectItem key={provincia.id} value={provincia.nombre}>
+                        {provincia.nombre}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="victimMunicipioResidencia" className="text-sm font-medium text-slate-700">
+                Localidad de Residencia
+              </Label>
+              <Select
+                value={data.municipioResidencia || ""}
+                onValueChange={(value) => handleChange("municipioResidencia", value)}
+                disabled={!data.provinciaResidencia || isLoadingMunicipios}
+              >
+                <SelectTrigger className="border-slate-300">
+                  <SelectValue
+                    placeholder={
+                      !data.provinciaResidencia
+                        ? "Primero seleccione provincia"
+                        : isLoadingMunicipios
+                          ? "Cargando localidades..."
+                          : "Seleccionar localidad"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {isLoadingMunicipios ? (
+                    <div className="flex items-center justify-center p-4">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Cargando...
+                    </div>
+                  ) : municipios.length === 0 ? (
+                    <div className="p-4 text-center text-slate-500 text-sm">No hay localidades disponibles</div>
+                  ) : (
+                    municipios.map((municipio) => (
+                      <SelectItem key={municipio.id} value={municipio.nombre}>
+                        {municipio.nombre}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
         <div className="mt-4 space-y-2">

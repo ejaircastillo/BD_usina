@@ -12,6 +12,8 @@ export interface Victima {
   telefono_contacto_familiar: string | null
   redes_sociales: string | null
   notas_adicionales: string | null
+  provincia_residencia: string | null
+  municipio_residencia: string | null
   created_at: string
   updated_at: string
 }

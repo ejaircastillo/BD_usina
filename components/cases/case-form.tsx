@@ -119,10 +119,10 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           edad: victimData.edad?.toString() || "",
           profesion: victimData.profesion || "",
           redesSociales: victimData.redes_sociales || "",
-          telefonoContactoFamiliar: victimData.telefono_contacto_familiar || "",
-          direccionCompleta: victimData.direccion_completa || "",
           nacionalidad: victimData.nacionalidad || "",
           notasAdicionales: victimData.notas_adicionales || "",
+          provinciaResidencia: victimData.provincia_residencia || "",
+          municipioResidencia: victimData.municipio_residencia || "",
         },
         victimResources: (victimResourcesData || []).map((r: any) => ({
           id: r.id,
@@ -185,11 +185,11 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         recursosCount: hecho?.recursos?.length || 0,
         victimResourcesCount: victimResourcesData?.length || 0,
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading case data:", error)
       toast({
-        title: "Error",
-        description: "No se pudieron cargar los datos del caso.",
+        title: "Error al cargar el caso",
+        description: error.message || "No se pudieron cargar los datos del caso.",
         variant: "destructive",
       })
     } finally {
@@ -198,16 +198,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
   }
 
   const handleSave = async () => {
-    if (!formData.victim?.nombreCompleto) {
-      toast({
-        title: "Error de validación",
-        description: "El nombre completo de la víctima es obligatorio.",
-        variant: "destructive",
-      })
-      setActiveTab("victim")
-      return
-    }
-
     setIsSaving(true)
     const supabase = createClient()
 
@@ -217,15 +207,15 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         const { error: victimError } = await supabase
           .from("victimas")
           .update({
-            nombre_completo: formData.victim.nombreCompleto,
+            nombre_completo: formData.victim.nombreCompleto || null,
             fecha_nacimiento: formData.victim.fechaNacimiento || null,
             edad: formData.victim.edad ? Number.parseInt(formData.victim.edad) : null,
             profesion: formData.victim.profesion || null,
             redes_sociales: formData.victim.redesSociales || null,
-            telefono_contacto_familiar: formData.victim.telefonoContactoFamiliar || null,
-            direccion_completa: formData.victim.direccionCompleta || null,
             nacionalidad: formData.victim.nacionalidad || null,
             notas_adicionales: formData.victim.notasAdicionales || null,
+            provincia_residencia: formData.victim.provinciaResidencia || null,
+            municipio_residencia: formData.victim.municipioResidencia || null,
           })
           .eq("id", caseId)
 
@@ -287,25 +277,27 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               if (accusedError) throw accusedError
 
               // Insert fechas_juicio
-              if (accused.trialDates && Array.isArray(accused.trialDates)) {
-                for (const fecha of accused.trialDates) {
-                  if (fecha) {
+              if (accused.trialDates && Array.isArray(accused.trialDates) && accused.trialDates.length > 0) {
+                for (const date of accused.trialDates) {
+                  if (date) {
                     await supabase.from("fechas_juicio").insert([
                       {
                         imputado_id: accusedData.id,
-                        fecha_audiencia: fecha,
+                        fecha_audiencia: date,
                       },
                     ])
                   }
                 }
               }
 
-              if (accused.resources && Array.isArray(accused.resources)) {
+              // Insert imputado resources
+              if (accused.resources && Array.isArray(accused.resources) && accused.resources.length > 0) {
                 for (const resource of accused.resources) {
                   if (resource.titulo || resource.url || resource.archivo_path) {
                     await supabase.from("recursos").insert([
                       {
                         imputado_id: accusedData.id,
+                        hecho_id: hechoId,
                         tipo: resource.tipo || null,
                         titulo: resource.titulo || null,
                         url: resource.url || null,
@@ -324,29 +316,30 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         }
 
+        // Delete and re-insert seguimiento
         await supabase.from("seguimiento").delete().eq("hecho_id", hechoId)
-        if (Object.keys(formData.followUp).length > 0) {
-          const { error: seguimientoError } = await supabase.from("seguimiento").insert([
+
+        if (formData.followUp) {
+          const { error: followUpError } = await supabase.from("seguimiento").insert([
             {
               hecho_id: hechoId,
+              primer_contacto: formData.followUp.primerContacto || null,
+              como_llego_caso: formData.followUp.comoLlegoCaso || null,
               miembro_asignado: formData.followUp.miembroAsignado || null,
               contacto_familia: formData.followUp.contactoFamiliar || null,
-              telefono_contacto: formData.followUp.telefonoContacto || null,
-              tipo_acompanamiento: formData.followUp.tipoAcompanamiento || [],
+              tipo_acompanamiento: formData.followUp.tipoAcompanamiento || null,
               abogado_querellante: formData.followUp.abogadoQuerellante || null,
               amicus_curiae: formData.followUp.amicusCuriae || false,
-              como_llego_caso: formData.followUp.comoLlegoCaso || null,
-              primer_contacto: formData.followUp.primerContacto || false,
               notas_seguimiento: formData.followUp.notasSeguimiento || null,
             },
           ])
-          if (seguimientoError) {
-            console.error("[v0] Error guardando seguimiento:", seguimientoError)
-          }
+
+          if (followUpError) throw followUpError
         }
 
-        // Delete and re-insert hecho resources
+        // Delete and re-insert recursos
         await supabase.from("recursos").delete().eq("hecho_id", hechoId).is("imputado_id", null)
+
         if (formData.resources && Array.isArray(formData.resources) && formData.resources.length > 0) {
           for (const resource of formData.resources) {
             if (resource.titulo || resource.url || resource.archivo_path) {
@@ -368,6 +361,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         }
 
+        // Delete and re-insert victim resources
         await supabase.from("recursos").delete().eq("victima_id", caseId).is("hecho_id", null).is("imputado_id", null)
         if (
           formData.victimResources &&
@@ -399,15 +393,15 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           .from("victimas")
           .insert([
             {
-              nombre_completo: formData.victim.nombreCompleto,
+              nombre_completo: formData.victim.nombreCompleto || null,
               fecha_nacimiento: formData.victim.fechaNacimiento || null,
               edad: formData.victim.edad ? Number.parseInt(formData.victim.edad) : null,
               profesion: formData.victim.profesion || null,
               redes_sociales: formData.victim.redesSociales || null,
-              telefono_contacto_familiar: formData.victim.telefonoContactoFamiliar || null,
-              direccion_completa: formData.victim.direccionCompleta || null,
               nacionalidad: formData.victim.nacionalidad || null,
               notas_adicionales: formData.victim.notasAdicionales || null,
+              provincia_residencia: formData.victim.provinciaResidencia || null,
+              municipio_residencia: formData.victim.municipioResidencia || null,
             },
           ])
           .select()
@@ -482,6 +476,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                     await supabase.from("recursos").insert([
                       {
                         imputado_id: accusedData.id,
+                        hecho_id: incidentData.id,
                         tipo: resource.tipo || null,
                         titulo: resource.titulo || null,
                         url: resource.url || null,
@@ -500,24 +495,22 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         }
 
-        if (Object.keys(formData.followUp).length > 0) {
-          const { error: seguimientoError } = await supabase.from("seguimiento").insert([
+        if (formData.followUp) {
+          const { error: followUpError } = await supabase.from("seguimiento").insert([
             {
               hecho_id: incidentData.id,
+              primer_contacto: formData.followUp.primerContacto || null,
+              como_llego_caso: formData.followUp.comoLlegoCaso || null,
               miembro_asignado: formData.followUp.miembroAsignado || null,
               contacto_familia: formData.followUp.contactoFamiliar || null,
-              telefono_contacto: formData.followUp.telefonoContacto || null,
-              tipo_acompanamiento: formData.followUp.tipoAcompanamiento || [],
+              tipo_acompanamiento: formData.followUp.tipoAcompanamiento || null,
               abogado_querellante: formData.followUp.abogadoQuerellante || null,
               amicus_curiae: formData.followUp.amicusCuriae || false,
-              como_llego_caso: formData.followUp.comoLlegoCaso || null,
-              primer_contacto: formData.followUp.primerContacto || false,
               notas_seguimiento: formData.followUp.notasSeguimiento || null,
             },
           ])
-          if (seguimientoError) {
-            console.error("[v0] Error guardando seguimiento:", seguimientoError)
-          }
+
+          if (followUpError) throw followUpError
         }
 
         // Insert hecho resources
@@ -542,6 +535,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         }
 
+        // Insert victim resources
         if (
           formData.victimResources &&
           Array.isArray(formData.victimResources) &&
