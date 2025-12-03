@@ -37,7 +37,7 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-slate-900 font-heading mb-4">Datos Personales de la Víctima</h3>
 

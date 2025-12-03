@@ -6,34 +6,19 @@ import { useEffect, useState, useRef } from "react"
 import { usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
-const DEV_BYPASS_AUTH = true
-
-export const MOCK_USER = {
-  id: "dev-user-123",
-  email: "admin@test.com",
-  user_metadata: {
-    full_name: "Admin de Prueba",
-  },
-  role: "authenticated",
-  created_at: new Date().toISOString(),
-}
+const DEV_BYPASS_AUTH = false
 
 interface AuthGuardProps {
   children: React.ReactNode
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(DEV_BYPASS_AUTH ? true : null)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const pathname = usePathname()
   const hasRedirectedRef = useRef(false)
   const supabase = createClient()
 
   useEffect(() => {
-    if (DEV_BYPASS_AUTH) {
-      setIsAuthenticated(true)
-      return
-    }
-
     if (hasRedirectedRef.current) return
 
     let isMounted = true
@@ -95,10 +80,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
       subscription.unsubscribe()
     }
   }, [supabase, pathname])
-
-  if (DEV_BYPASS_AUTH) {
-    return <>{children}</>
-  }
 
   // Mostrar loading mientras verifica autenticación
   if (isAuthenticated === null) {
