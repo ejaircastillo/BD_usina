@@ -4,46 +4,33 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useArgentinaGeo } from "@/hooks/use-argentina-geo"
+import { Loader2 } from "lucide-react"
 
 interface IncidentFormProps {
   data: any
   onChange: (data: any) => void
 }
 
-const provinces = [
-  "Buenos Aires",
-  "Catamarca",
-  "Chaco",
-  "Chubut",
-  "Córdoba",
-  "Corrientes",
-  "Entre Ríos",
-  "Formosa",
-  "Jujuy",
-  "La Pampa",
-  "La Rioja",
-  "Mendoza",
-  "Misiones",
-  "Neuquén",
-  "Río Negro",
-  "Salta",
-  "San Juan",
-  "San Luis",
-  "Santa Cruz",
-  "Santa Fe",
-  "Santiago del Estero",
-  "Tierra del Fuego",
-  "Tucumán",
-  "CABA",
-]
-
 const locationTypes = ["Vía Pública", "Vivienda Particular", "Comercio", "Unidad Penitenciaria", "Comisaría", "Otro"]
 
 export function IncidentForm({ data, onChange }: IncidentFormProps) {
+  const { provincias, municipios, loadingProvincias, loadingMunicipios, errorProvincias } = useArgentinaGeo(
+    data.provincia,
+  )
+
   const handleChange = (field: string, value: string) => {
     onChange({
       ...data,
       [field]: value,
+    })
+  }
+
+  const handleProvinciaChange = (value: string) => {
+    onChange({
+      ...data,
+      provincia: value,
+      municipio: "", // Clear municipio when provincia changes
     })
   }
 
@@ -81,19 +68,64 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-700">Provincia</Label>
-            <Select value={data.provincia || ""} onValueChange={(value) => handleChange("provincia", value)}>
+            <Label className="text-sm font-medium text-slate-700">Provincia *</Label>
+            <Select value={data.provincia || ""} onValueChange={handleProvinciaChange} disabled={loadingProvincias}>
               <SelectTrigger className="border-slate-300">
-                <SelectValue placeholder="Seleccionar provincia" />
+                {loadingProvincias ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Cargando provincias...</span>
+                  </div>
+                ) : (
+                  <SelectValue placeholder="Seleccionar provincia" />
+                )}
               </SelectTrigger>
               <SelectContent>
-                {provinces.map((province) => (
-                  <SelectItem key={province} value={province}>
-                    {province}
+                {provincias.map((provincia) => (
+                  <SelectItem key={provincia.id} value={provincia.nombre}>
+                    {provincia.nombre}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {errorProvincias && <p className="text-xs text-amber-600">{errorProvincias} (usando lista local)</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-slate-700">Municipio</Label>
+            <Select
+              value={data.municipio || ""}
+              onValueChange={(value) => handleChange("municipio", value)}
+              disabled={!data.provincia || loadingMunicipios}
+            >
+              <SelectTrigger className="border-slate-300">
+                {loadingMunicipios ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Cargando municipios...</span>
+                  </div>
+                ) : !data.provincia ? (
+                  <span className="text-muted-foreground">Primero seleccione provincia</span>
+                ) : (
+                  <SelectValue placeholder="Seleccionar municipio" />
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                {municipios.map((municipio) => (
+                  <SelectItem key={municipio.id} value={municipio.nombre}>
+                    {municipio.nombre}
+                  </SelectItem>
+                ))}
+                {municipios.length === 0 && data.provincia && !loadingMunicipios && (
+                  <SelectItem value="_empty" disabled>
+                    No se encontraron municipios
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+            {!data.provincia && (
+              <p className="text-xs text-muted-foreground">Seleccione una provincia para ver municipios</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -105,19 +137,6 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
               placeholder="Ciudad o localidad"
               value={data.ciudad || ""}
               onChange={(e) => handleChange("ciudad", e.target.value)}
-              className="border-slate-300"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="municipality" className="text-sm font-medium text-slate-700">
-              Municipio
-            </Label>
-            <Input
-              id="municipality"
-              placeholder="Municipio donde sucedieron los hechos"
-              value={data.municipio || ""}
-              onChange={(e) => handleChange("municipio", e.target.value)}
               className="border-slate-300"
             />
           </div>
