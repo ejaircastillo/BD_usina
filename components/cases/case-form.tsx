@@ -28,8 +28,10 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
   const [isLoading, setIsLoading] = useState(mode === "edit")
   const [formData, setFormData] = useState({
     victim: {},
-    victimResources: [], // NEW: Resources linked to victim
-    incident: {},
+    victimResources: [],
+    incident: {
+      instanciasJudiciales: [],
+    },
     accused: [],
     followUp: {},
     resources: [],
@@ -56,7 +58,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               fechas_juicio (*)
             ),
             seguimiento (*),
-            recursos (*)
+            recursos (*),
+            instancias_judiciales (*)
           )
         `)
         .eq("id", caseId)
@@ -142,12 +145,19 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           fechaFallecimiento: hecho?.fecha_fallecimiento || "",
           provincia: hecho?.provincia || "",
           municipio: hecho?.municipio || "",
-          lugarEspecifico: hecho?.lugar_especifico || "",
+          localidadBarrio: hecho?.localidad_barrio || "",
+          tipoLugar: hecho?.tipo_lugar || "",
+          lugarOtro: hecho?.lugar_otro || "",
           resumenHecho: hecho?.resumen_hecho || "",
-          numeroCausa: hecho?.numero_causa || "",
-          caratula: hecho?.caratula || "",
-          emailFiscalia: hecho?.email_fiscalia || "",
-          telefonoFiscalia: hecho?.telefono_fiscalia || "",
+          tipoCrimen: hecho?.tipo_crimen || "",
+          tipoArma: hecho?.tipo_arma || "",
+          instanciasJudiciales: (hecho?.instancias_judiciales || []).map((inst: any) => ({
+            id: inst.id,
+            numeroCausa: inst.numero_causa || "",
+            fiscalFiscalia: inst.fiscal_fiscalia || "",
+            caratula: inst.caratula || "",
+            ordenNivel: inst.orden_nivel || "",
+          })),
         },
         accused: imputadosWithResources,
         followUp: {
@@ -162,7 +172,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           notasSeguimiento: hecho?.seguimiento?.[0]?.notas_seguimiento || "",
         },
         resources: (hecho?.recursos || [])
-          .filter((r: any) => !r.imputado_id) // Only hecho resources, not imputado
+          .filter((r: any) => !r.imputado_id)
           .map((recurso: any) => ({
             id: recurso.id,
             tipo: recurso.tipo || "",
@@ -176,14 +186,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             archivo_size: recurso.archivo_size,
             input_mode: recurso.archivo_path ? "file" : "url",
           })),
-      })
-
-      console.log("[v0] Datos cargados correctamente:", {
-        victimId: caseId,
-        hechoId: hecho?.id,
-        imputadosCount: hecho?.imputados?.length || 0,
-        recursosCount: hecho?.recursos?.length || 0,
-        victimResourcesCount: victimResourcesData?.length || 0,
       })
     } catch (error: any) {
       console.error("Error loading case data:", error)
@@ -238,16 +240,34 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             fecha_fallecimiento: formData.incident.fechaFallecimiento || null,
             provincia: formData.incident.provincia || null,
             municipio: formData.incident.municipio || null,
-            lugar_especifico: formData.incident.lugarEspecifico || null,
+            localidad_barrio: formData.incident.localidadBarrio || null,
+            tipo_lugar: formData.incident.tipoLugar || null,
+            lugar_otro: formData.incident.lugarOtro || null,
             resumen_hecho: formData.incident.resumenHecho || null,
-            numero_causa: formData.incident.numeroCausa || null,
-            caratula: formData.incident.caratula || null,
-            email_fiscalia: formData.incident.emailFiscalia || null,
-            telefono_fiscalia: formData.incident.telefonoFiscalia || null,
+            tipo_crimen: formData.incident.tipoCrimen || null,
+            tipo_arma: formData.incident.tipoArma || null,
           })
           .eq("id", hechoId)
 
         if (incidentError) throw incidentError
+
+        await supabase.from("instancias_judiciales").delete().eq("hecho_id", hechoId)
+
+        if (formData.incident.instanciasJudiciales && formData.incident.instanciasJudiciales.length > 0) {
+          for (const instancia of formData.incident.instanciasJudiciales) {
+            if (instancia.numeroCausa || instancia.fiscalFiscalia || instancia.caratula) {
+              await supabase.from("instancias_judiciales").insert([
+                {
+                  hecho_id: hechoId,
+                  numero_causa: instancia.numeroCausa || null,
+                  fiscal_fiscalia: instancia.fiscalFiscalia || null,
+                  caratula: instancia.caratula || null,
+                  orden_nivel: instancia.ordenNivel || null,
+                },
+              ])
+            }
+          }
+        }
 
         // Delete and re-insert imputados
         await supabase.from("imputados").delete().eq("hecho_id", hechoId)
@@ -418,18 +438,34 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               fecha_fallecimiento: formData.incident.fechaFallecimiento || null,
               provincia: formData.incident.provincia || null,
               municipio: formData.incident.municipio || null,
-              lugar_especifico: formData.incident.lugarEspecifico || null,
+              localidad_barrio: formData.incident.localidadBarrio || null,
+              tipo_lugar: formData.incident.tipoLugar || null,
+              lugar_otro: formData.incident.lugarOtro || null,
               resumen_hecho: formData.incident.resumenHecho || null,
-              numero_causa: formData.incident.numeroCausa || null,
-              caratula: formData.incident.caratula || null,
-              email_fiscalia: formData.incident.emailFiscalia || null,
-              telefono_fiscalia: formData.incident.telefonoFiscalia || null,
+              tipo_crimen: formData.incident.tipoCrimen || null,
+              tipo_arma: formData.incident.tipoArma || null,
             },
           ])
           .select()
           .single()
 
         if (incidentError) throw incidentError
+
+        if (formData.incident.instanciasJudiciales && formData.incident.instanciasJudiciales.length > 0) {
+          for (const instancia of formData.incident.instanciasJudiciales) {
+            if (instancia.numeroCausa || instancia.fiscalFiscalia || instancia.caratula) {
+              await supabase.from("instancias_judiciales").insert([
+                {
+                  hecho_id: incidentData.id,
+                  numero_causa: instancia.numeroCausa || null,
+                  fiscal_fiscalia: instancia.fiscalFiscalia || null,
+                  caratula: instancia.caratula || null,
+                  orden_nivel: instancia.ordenNivel || null,
+                },
+              ])
+            }
+          }
+        }
 
         // Insert imputados with resources
         if (formData.accused && Array.isArray(formData.accused) && formData.accused.length > 0) {

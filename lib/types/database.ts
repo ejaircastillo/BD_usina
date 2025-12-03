@@ -31,6 +31,11 @@ export interface Hecho {
   numero_causa: string | null
   telefono_fiscalia: string | null
   email_fiscalia: string | null
+  tipo_crimen: string | null
+  tipo_arma: string | null
+  tipo_lugar: string | null
+  lugar_otro: string | null
+  localidad_barrio: string | null
   created_at: string
   updated_at: string
 }
@@ -140,3 +145,17 @@ export interface CasoCompleto extends Caso {
 export interface ImputadoConFechas extends Imputado {
   fechas_juicio: FechaJuicio[]
 }
+
+export interface InstanciaJudicial {
+  id: string
+  hecho_id: string
+  numero_causa: string | null
+  fiscal_fiscalia: string | null
+  caratula: string | null
+  orden_nivel: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type InstanciaJudicialInsert = Omit<InstanciaJudicial, "id" | "created_at" | "updated_at">
+export type InstanciaJudicialUpdate = Partial<InstanciaJudicialInsert>
