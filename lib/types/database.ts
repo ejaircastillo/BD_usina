@@ -62,6 +62,15 @@ export interface Imputado {
   pena: string | null
   prision_perpetua: boolean | null
   fecha_veredicto: string | null
+  documento_identidad: string | null
+  tribunal_fallo: string | null
+  es_extranjero: boolean | null
+  detenido_previo: boolean | null
+  fallecido: boolean | null
+  es_reincidente: boolean | null
+  alias: string | null
+  edad: string | null
+  cargos: string | null
   created_at: string
   updated_at: string
 }

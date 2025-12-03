@@ -92,6 +92,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           return {
             id: imputado.id,
             apellidoNombre: imputado.apellido_nombre || "",
+            alias: imputado.alias || "",
+            edad: imputado.edad || "",
             menorEdad: imputado.menor_edad || false,
             nacionalidad: imputado.nacionalidad || "",
             juzgadoUfi: imputado.juzgado_ufi || "",
@@ -100,6 +102,13 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             juicioAbreviado: imputado.juicio_abreviado || false,
             prisionPerpetua: imputado.prision_perpetua || false,
             fechaVeredicto: imputado.fecha_veredicto || "",
+            documentoIdentidad: imputado.documento_identidad || "",
+            tribunalFallo: imputado.tribunal_fallo || "",
+            esExtranjero: imputado.es_extranjero || false,
+            detenidoPrevio: imputado.detenido_previo || false,
+            fallecido: imputado.fallecido || false,
+            esReincidente: imputado.es_reincidente || false,
+            cargos: imputado.cargos || "",
             trialDates: imputado.fechas_juicio?.map((fecha: any) => fecha.fecha_audiencia || fecha.fecha) || [],
             resources: (imputadoResources || []).map((r: any) => ({
               id: r.id,
@@ -202,6 +211,28 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
     }
   }
 
+  const buildImputadoInsert = (accused: any, hechoId: string) => ({
+    hecho_id: hechoId,
+    apellido_nombre: accused.apellidoNombre,
+    alias: accused.alias || null,
+    edad: accused.edad || null,
+    menor_edad: accused.menorEdad || false,
+    nacionalidad: accused.nacionalidad || null,
+    juzgado_ufi: accused.juzgadoUfi || null,
+    estado_procesal: accused.estadoProcesal || null,
+    pena: accused.pena || null,
+    juicio_abreviado: accused.juicioAbreviado || false,
+    prision_perpetua: accused.prisionPerpetua || false,
+    fecha_veredicto: accused.fechaVeredicto || null,
+    documento_identidad: accused.documentoIdentidad || null,
+    tribunal_fallo: accused.tribunalFallo || null,
+    es_extranjero: accused.esExtranjero || false,
+    detenido_previo: accused.detenidoPrevio || false,
+    fallecido: accused.fallecido || false,
+    es_reincidente: accused.esReincidente || false,
+    cargos: accused.cargos || null,
+  })
+
   const handleSaveAndContinue = async () => {
     setIsSavingAndContinue(true)
     const supabase = createClient()
@@ -270,20 +301,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           if (accused.apellidoNombre) {
             const { data: accusedData, error: accusedError } = await supabase
               .from("imputados")
-              .insert([
-                {
-                  hecho_id: incidentData.id,
-                  apellido_nombre: accused.apellidoNombre,
-                  menor_edad: accused.menorEdad || false,
-                  nacionalidad: accused.nacionalidad || null,
-                  juzgado_ufi: accused.juzgadoUfi || null,
-                  estado_procesal: accused.estadoProcesal || null,
-                  pena: accused.pena || null,
-                  juicio_abreviado: accused.juicioAbreviado || false,
-                  prision_perpetua: accused.prisionPerpetua || false,
-                  fecha_veredicto: accused.fechaVeredicto || null,
-                },
-              ])
+              .insert([buildImputadoInsert(accused, incidentData.id)])
               .select()
               .single()
 
@@ -487,20 +505,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             if (accused.apellidoNombre) {
               const { data: accusedData, error: accusedError } = await supabase
                 .from("imputados")
-                .insert([
-                  {
-                    hecho_id: hechoId,
-                    apellido_nombre: accused.apellidoNombre,
-                    menor_edad: accused.menorEdad || false,
-                    nacionalidad: accused.nacionalidad || null,
-                    juzgado_ufi: accused.juzgadoUfi || null,
-                    estado_procesal: accused.estadoProcesal || null,
-                    pena: accused.pena || null,
-                    juicio_abreviado: accused.juicioAbreviado || false,
-                    prision_perpetua: accused.prisionPerpetua || false,
-                    fecha_veredicto: accused.fechaVeredicto || null,
-                  },
-                ])
+                .insert([buildImputadoInsert(accused, hechoId)])
                 .select()
                 .single()
 
@@ -677,20 +682,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             if (accused.apellidoNombre) {
               const { data: accusedData, error: accusedError } = await supabase
                 .from("imputados")
-                .insert([
-                  {
-                    hecho_id: incidentData.id,
-                    apellido_nombre: accused.apellidoNombre,
-                    menor_edad: accused.menorEdad || false,
-                    nacionalidad: accused.nacionalidad || null,
-                    juzgado_ufi: accused.juzgadoUfi || null,
-                    estado_procesal: accused.estadoProcesal || null,
-                    pena: accused.pena || null,
-                    juicio_abreviado: accused.juicioAbreviado || false,
-                    prision_perpetua: accused.prisionPerpetua || false,
-                    fecha_veredicto: accused.fechaVeredicto || null,
-                  },
-                ])
+                .insert([buildImputadoInsert(accused, incidentData.id)])
                 .select()
                 .single()
 
@@ -800,16 +792,19 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
       }
 
       toast({
-        title: mode === "create" ? "Caso creado" : "Caso actualizado",
-        description: "Los datos se han guardado correctamente en la base de datos.",
+        title: mode === "edit" ? "Caso actualizado" : "Caso guardado",
+        description:
+          mode === "edit"
+            ? "Los cambios han sido guardados correctamente."
+            : "El caso ha sido registrado correctamente.",
       })
 
-      router.push("/")
-    } catch (error) {
+      router.push("/casos")
+    } catch (error: any) {
       console.error("Error saving case:", error)
       toast({
         title: "Error",
-        description: "No se pudo guardar el caso. Verifique la conexión a la base de datos.",
+        description: error.message || "No se pudo guardar el caso. Verifique la conexión a la base de datos.",
         variant: "destructive",
       })
     } finally {
@@ -817,53 +812,50 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
     }
   }
 
-  const updateFormData = (section: string, data: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      [section]: data,
-    }))
-  }
-
   if (isLoading) {
     return (
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-800 mx-auto mb-4"></div>
-            <p className="text-slate-600">Cargando datos del caso...</p>
-          </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Cargando datos del caso...</p>
         </div>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href={mode === "edit" ? `/casos/${caseId}` : "/"}>
-            <Button variant="outline" size="sm" className="flex items-center gap-2 bg-transparent">
+          <Link href="/casos">
+            <Button variant="outline" size="icon">
               <ArrowLeft className="w-4 h-4" />
-              {mode === "edit" ? "Volver al Caso" : "Volver a Casos"}
             </Button>
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-slate-900 font-heading">
-              {mode === "create" ? "Nuevo Caso" : `Editar Caso #${caseId}`}
+              {mode === "edit" ? "Editar Caso" : "Nuevo Caso"}
             </h1>
-            <p className="text-slate-600">
-              {mode === "create" ? "Complete la información del nuevo caso" : "Modifique los datos del caso existente"}
+            <p className="text-sm text-slate-500">
+              {mode === "edit"
+                ? "Modifica los datos del caso existente"
+                : "Complete los datos para registrar un nuevo caso"}
             </p>
           </div>
         </div>
-
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2">
+          <Link href="/casos">
+            <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+              <X className="w-4 h-4" />
+              Cancelar
+            </Button>
+          </Link>
           {mode === "create" && (
             <Button
               onClick={handleSaveAndContinue}
               disabled={isSaving || isSavingAndContinue}
               variant="outline"
-              className="flex items-center gap-2 bg-transparent border-slate-300 hover:bg-slate-50"
+              className="flex items-center gap-2 bg-transparent"
             >
               <UserPlus className="w-4 h-4" />
               {isSavingAndContinue ? "Guardando..." : "Guardar y Agregar Otra Víctima"}
@@ -872,78 +864,83 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           <Button
             onClick={handleSave}
             disabled={isSaving || isSavingAndContinue}
-            className="bg-slate-800 hover:bg-slate-700 flex items-center gap-2"
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700"
           >
             <Save className="w-4 h-4" />
             {isSaving ? "Guardando..." : "Guardar Caso"}
           </Button>
-          <Link href={mode === "edit" ? `/casos/${caseId}` : "/"}>
-            <Button variant="outline" className="flex items-center gap-2 bg-transparent">
-              <X className="w-4 h-4" />
-              Cancelar
-            </Button>
-          </Link>
         </div>
       </div>
 
       <Card className="border-slate-200">
-        <CardHeader>
-          <CardTitle className="font-heading">Información del Caso</CardTitle>
+        <CardHeader className="bg-slate-50 border-b border-slate-200">
+          <CardTitle className="text-lg font-heading">Información del Caso</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 mb-8">
-              <TabsTrigger value="victim" className="text-sm">
-                Víctima
-              </TabsTrigger>
-              <TabsTrigger value="incident" className="text-sm">
-                Hecho
-              </TabsTrigger>
-              <TabsTrigger value="accused" className="text-sm">
-                Imputados
-              </TabsTrigger>
-              <TabsTrigger value="followup" className="text-sm">
-                Seguimiento
-              </TabsTrigger>
-              <TabsTrigger value="resources" className="text-sm">
-                Recursos
-              </TabsTrigger>
+            <TabsList className="grid w-full grid-cols-5 mb-6">
+              <TabsTrigger value="victim">Víctima</TabsTrigger>
+              <TabsTrigger value="incident">Hecho</TabsTrigger>
+              <TabsTrigger value="accused">Imputados</TabsTrigger>
+              <TabsTrigger value="followup">Seguimiento</TabsTrigger>
+              <TabsTrigger value="resources">Recursos</TabsTrigger>
             </TabsList>
 
             <TabsContent value="victim" className="space-y-6">
-              <VictimForm data={formData.victim} onChange={(data) => updateFormData("victim", data)} />
+              <VictimForm
+                data={formData.victim}
+                onChange={(data) => setFormData((prev) => ({ ...prev, victim: data }))}
+              />
               <div className="border-t pt-6 mt-6">
-                <h3 className="text-lg font-semibold text-slate-900 font-heading mb-4">
-                  Recursos Multimedia de la Víctima
-                </h3>
-                <p className="text-sm text-slate-500 mb-4">
-                  Fotos, documentos y enlaces relacionados directamente con la víctima (no con el hecho).
+                <h3 className="text-lg font-semibold text-slate-900 font-heading mb-2">Recursos de la Víctima</h3>
+                <p className="text-xs text-slate-500 mb-4">
+                  Fotos, documentos y enlaces relacionados directamente con la víctima.
                 </p>
                 <ResourcesForm
                   data={formData.victimResources}
-                  onChange={(data) => updateFormData("victimResources", data)}
+                  onChange={(data) => setFormData((prev) => ({ ...prev, victimResources: data }))}
                 />
               </div>
             </TabsContent>
 
-            <TabsContent value="incident" className="space-y-6">
-              <IncidentForm data={formData.incident} onChange={(data) => updateFormData("incident", data)} />
+            <TabsContent value="incident">
+              <IncidentForm
+                data={formData.incident}
+                onChange={(data) => setFormData((prev) => ({ ...prev, incident: data }))}
+              />
             </TabsContent>
 
-            <TabsContent value="accused" className="space-y-6">
-              <AccusedForm data={formData.accused} onChange={(data) => updateFormData("accused", data)} />
+            <TabsContent value="accused">
+              <AccusedForm
+                data={formData.accused}
+                onChange={(data) => setFormData((prev) => ({ ...prev, accused: data }))}
+              />
             </TabsContent>
 
-            <TabsContent value="followup" className="space-y-6">
-              <FollowUpForm data={formData.followUp} onChange={(data) => updateFormData("followUp", data)} />
+            <TabsContent value="followup">
+              <FollowUpForm
+                data={formData.followUp}
+                onChange={(data) => setFormData((prev) => ({ ...prev, followUp: data }))}
+              />
             </TabsContent>
 
-            <TabsContent value="resources" className="space-y-6">
-              <ResourcesForm data={formData.resources} onChange={(data) => updateFormData("resources", data)} />
+            <TabsContent value="resources">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900 font-heading">Recursos del Caso</h3>
+                  <p className="text-sm text-slate-500">
+                    Agregue enlaces a noticias, documentos, fotos y otros recursos relacionados con el caso.
+                  </p>
+                </div>
+                <ResourcesForm
+                  data={formData.resources}
+                  onChange={(data) => setFormData((prev) => ({ ...prev, resources: data }))}
+                />
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
-    </main>
+    </div>
   )
 }

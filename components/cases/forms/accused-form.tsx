@@ -6,9 +6,21 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Trash2, Loader2 } from "lucide-react"
 import React from "react"
 import { ResourcesForm } from "./resources-form"
+import { useCountries } from "@/hooks/use-countries"
+
+const ESTADO_PROCESAL_OPTIONS = [
+  { value: "sospechoso", label: "Sospechoso" },
+  { value: "imputado_procesado", label: "Imputado/Procesado" },
+  { value: "a_juicio", label: "A juicio" },
+  { value: "sobreseido", label: "Sobreseído" },
+  { value: "condenado", label: "Condenado" },
+  { value: "absuelto", label: "Absuelto" },
+  { value: "prescripcion", label: "Prescripción" },
+  { value: "menor_inimputable", label: "Menor inimputable con medida de seguridad" },
+]
 
 interface AccusedFormProps {
   data: any[]
@@ -17,6 +29,7 @@ interface AccusedFormProps {
 
 export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
   const [totalInvolved, setTotalInvolved] = React.useState(data.length || 0)
+  const { countries, isLoading: isLoadingCountries } = useCountries()
 
   const addAccused = () => {
     const newAccused = {
@@ -25,6 +38,8 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
       alias: "",
       edad: "",
       nacionalidad: "",
+      documentoIdentidad: "",
+      tribunalFallo: "",
       menorEdad: false,
       juzgadoUfi: "",
       estadoProcesal: "",
@@ -33,8 +48,12 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
       pena: "",
       juicioAbreviado: false,
       prisionPerpetua: false,
+      esExtranjero: false,
+      detenidoPrevio: false,
+      fallecido: false,
+      esReincidente: false,
       cargos: "",
-      resources: [], // Resources array for file uploads
+      resources: [],
     }
     onChange([...data, newAccused])
   }
@@ -144,6 +163,16 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                   </div>
 
                   <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700">DNI / Documento</Label>
+                    <Input
+                      placeholder="Número de documento de identidad"
+                      value={accused.documentoIdentidad || ""}
+                      onChange={(e) => updateAccused(accused.id, "documentoIdentidad", e.target.value)}
+                      className="border-slate-300"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-slate-700">Edad</Label>
                     <Input
                       placeholder="Edad o edad aproximada"
@@ -155,12 +184,29 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
 
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-slate-700">Nacionalidad</Label>
-                    <Input
-                      placeholder="Nacionalidad del imputado"
+                    <Select
                       value={accused.nacionalidad || ""}
-                      onChange={(e) => updateAccused(accused.id, "nacionalidad", e.target.value)}
-                      className="border-slate-300"
-                    />
+                      onValueChange={(value) => updateAccused(accused.id, "nacionalidad", value)}
+                    >
+                      <SelectTrigger className="border-slate-300">
+                        <SelectValue
+                          placeholder={isLoadingCountries ? "Cargando países..." : "Seleccionar nacionalidad"}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {isLoadingCountries ? (
+                          <div className="flex items-center justify-center p-2">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          </div>
+                        ) : (
+                          countries.map((country) => (
+                            <SelectItem key={country} value={country}>
+                              {country}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
@@ -183,15 +229,23 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                         <SelectValue placeholder="Seleccionar estado procesal" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="investigation">En investigación</SelectItem>
-                        <SelectItem value="prosecution">En proceso</SelectItem>
-                        <SelectItem value="trial">En juicio</SelectItem>
-                        <SelectItem value="convicted">Condenado</SelectItem>
-                        <SelectItem value="acquitted">Absuelto</SelectItem>
-                        <SelectItem value="dismissed">Sobreseído</SelectItem>
-                        <SelectItem value="prescription">Prescripción</SelectItem>
+                        {ESTADO_PROCESAL_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700">Tribunal que dictó fallo</Label>
+                    <Input
+                      placeholder="Nombre del tribunal"
+                      value={accused.tribunalFallo || ""}
+                      onChange={(e) => updateAccused(accused.id, "tribunalFallo", e.target.value)}
+                      className="border-slate-300"
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -257,38 +311,85 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                   )}
                 </div>
 
-                <div className="flex flex-col space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`minor-${accused.id}`}
-                      checked={accused.menorEdad || false}
-                      onCheckedChange={(checked) => updateAccused(accused.id, "menorEdad", checked)}
-                    />
-                    <Label htmlFor={`minor-${accused.id}`} className="text-sm font-medium text-slate-700">
-                      Menor de Edad
-                    </Label>
-                  </div>
+                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                  <Label className="text-sm font-medium text-slate-700 mb-3 block">Opciones Adicionales</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`minor-${accused.id}`}
+                        checked={accused.menorEdad || false}
+                        onCheckedChange={(checked) => updateAccused(accused.id, "menorEdad", checked)}
+                      />
+                      <Label htmlFor={`minor-${accused.id}`} className="text-sm text-slate-700">
+                        Menor de Edad
+                      </Label>
+                    </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`abbreviated-${accused.id}`}
-                      checked={accused.juicioAbreviado || false}
-                      onCheckedChange={(checked) => updateAccused(accused.id, "juicioAbreviado", checked)}
-                    />
-                    <Label htmlFor={`abbreviated-${accused.id}`} className="text-sm font-medium text-slate-700">
-                      Juicio Abreviado
-                    </Label>
-                  </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`extranjero-${accused.id}`}
+                        checked={accused.esExtranjero || false}
+                        onCheckedChange={(checked) => updateAccused(accused.id, "esExtranjero", checked)}
+                      />
+                      <Label htmlFor={`extranjero-${accused.id}`} className="text-sm text-slate-700">
+                        Extranjero
+                      </Label>
+                    </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`life-sentence-${accused.id}`}
-                      checked={accused.prisionPerpetua || false}
-                      onCheckedChange={(checked) => updateAccused(accused.id, "prisionPerpetua", checked)}
-                    />
-                    <Label htmlFor={`life-sentence-${accused.id}`} className="text-sm font-medium text-slate-700">
-                      Prisión Perpetua
-                    </Label>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`detenido-${accused.id}`}
+                        checked={accused.detenidoPrevio || false}
+                        onCheckedChange={(checked) => updateAccused(accused.id, "detenidoPrevio", checked)}
+                      />
+                      <Label htmlFor={`detenido-${accused.id}`} className="text-sm text-slate-700">
+                        Detenido antes del juicio
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`abbreviated-${accused.id}`}
+                        checked={accused.juicioAbreviado || false}
+                        onCheckedChange={(checked) => updateAccused(accused.id, "juicioAbreviado", checked)}
+                      />
+                      <Label htmlFor={`abbreviated-${accused.id}`} className="text-sm text-slate-700">
+                        Juicio Abreviado
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`life-sentence-${accused.id}`}
+                        checked={accused.prisionPerpetua || false}
+                        onCheckedChange={(checked) => updateAccused(accused.id, "prisionPerpetua", checked)}
+                      />
+                      <Label htmlFor={`life-sentence-${accused.id}`} className="text-sm text-slate-700">
+                        Prisión Perpetua
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`fallecido-${accused.id}`}
+                        checked={accused.fallecido || false}
+                        onCheckedChange={(checked) => updateAccused(accused.id, "fallecido", checked)}
+                      />
+                      <Label htmlFor={`fallecido-${accused.id}`} className="text-sm text-slate-700">
+                        Muerte
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`reincidente-${accused.id}`}
+                        checked={accused.esReincidente || false}
+                        onCheckedChange={(checked) => updateAccused(accused.id, "esReincidente", checked)}
+                      />
+                      <Label htmlFor={`reincidente-${accused.id}`} className="text-sm text-slate-700">
+                        Reincidencia
+                      </Label>
+                    </div>
                   </div>
                 </div>
 
