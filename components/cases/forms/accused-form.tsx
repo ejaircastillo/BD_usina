@@ -96,7 +96,7 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl mx-auto">
       <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
         <div className="flex items-center gap-4">
           <Label className="text-sm font-medium text-slate-700">Cantidad Total de Involucrados:</Label>
@@ -200,8 +200,8 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                           </div>
                         ) : (
                           countries.map((country) => (
-                            <SelectItem key={country} value={country}>
-                              {country}
+                            <SelectItem key={country.nameSpanish} value={country.nameSpanish}>
+                              {country.nameSpanish}
                             </SelectItem>
                           ))
                         )}
