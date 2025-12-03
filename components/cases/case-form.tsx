@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Save, X } from "lucide-react"
+import { ArrowLeft, Save, X, UserPlus } from "lucide-react"
 import Link from "next/link"
 import { VictimForm } from "./forms/victim-form"
 import { IncidentForm } from "./forms/incident-form"
@@ -20,11 +20,16 @@ interface CaseFormProps {
   caseId?: string
 }
 
+const getEmptyVictimData = () => ({})
+const getEmptyAccusedData = () => []
+const getEmptyVictimResources = () => []
+
 export function CaseForm({ mode, caseId }: CaseFormProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("victim")
   const [isSaving, setIsSaving] = useState(false)
+  const [isSavingAndContinue, setIsSavingAndContinue] = useState(false)
   const [isLoading, setIsLoading] = useState(mode === "edit")
   const [formData, setFormData] = useState({
     victim: {},
@@ -67,7 +72,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
       if (victimError) throw victimError
 
-      // Fetch victim-specific resources
       const { data: victimResourcesData } = await supabase
         .from("recursos")
         .select("*")
@@ -81,7 +85,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
       const hecho = victimData.hechos[0]
 
-      // Fetch imputado resources separately
       const imputadosWithResources = await Promise.all(
         (hecho?.imputados || []).map(async (imputado: any) => {
           const { data: imputadoResources } = await supabase.from("recursos").select("*").eq("imputado_id", imputado.id)
@@ -199,13 +202,223 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
     }
   }
 
-  const handleSave = async () => {
-    setIsSaving(true)
+  const handleSaveAndContinue = async () => {
+    setIsSavingAndContinue(true)
     const supabase = createClient()
 
     try {
+      const { data: victimData, error: victimError } = await supabase
+        .from("victimas")
+        .insert([
+          {
+            nombre_completo: formData.victim.nombreCompleto || null,
+            fecha_nacimiento: formData.victim.fechaNacimiento || null,
+            edad: formData.victim.edad ? Number.parseInt(formData.victim.edad) : null,
+            profesion: formData.victim.profesion || null,
+            redes_sociales: formData.victim.redesSociales || null,
+            nacionalidad: formData.victim.nacionalidad || null,
+            notas_adicionales: formData.victim.notasAdicionales || null,
+            provincia_residencia: formData.victim.provinciaResidencia || null,
+            municipio_residencia: formData.victim.municipioResidencia || null,
+          },
+        ])
+        .select()
+        .single()
+
+      if (victimError) throw victimError
+
+      const { data: incidentData, error: incidentError } = await supabase
+        .from("hechos")
+        .insert([
+          {
+            victima_id: victimData.id,
+            fecha_hecho: formData.incident.fechaHecho || null,
+            fecha_fallecimiento: formData.incident.fechaFallecimiento || null,
+            provincia: formData.incident.provincia || null,
+            municipio: formData.incident.municipio || null,
+            localidad_barrio: formData.incident.localidadBarrio || null,
+            tipo_lugar: formData.incident.tipoLugar || null,
+            lugar_otro: formData.incident.lugarOtro || null,
+            resumen_hecho: formData.incident.resumenHecho || null,
+            tipo_crimen: formData.incident.tipoCrimen || null,
+            tipo_arma: formData.incident.tipoArma || null,
+          },
+        ])
+        .select()
+        .single()
+
+      if (incidentError) throw incidentError
+
+      if (formData.incident.instanciasJudiciales && formData.incident.instanciasJudiciales.length > 0) {
+        for (const instancia of formData.incident.instanciasJudiciales) {
+          if (instancia.numeroCausa || instancia.fiscalFiscalia || instancia.caratula) {
+            await supabase.from("instancias_judiciales").insert([
+              {
+                hecho_id: incidentData.id,
+                numero_causa: instancia.numeroCausa || null,
+                fiscal_fiscalia: instancia.fiscalFiscalia || null,
+                caratula: instancia.caratula || null,
+                orden_nivel: instancia.ordenNivel || null,
+              },
+            ])
+          }
+        }
+      }
+
+      if (formData.accused && Array.isArray(formData.accused) && formData.accused.length > 0) {
+        for (const accused of formData.accused) {
+          if (accused.apellidoNombre) {
+            const { data: accusedData, error: accusedError } = await supabase
+              .from("imputados")
+              .insert([
+                {
+                  hecho_id: incidentData.id,
+                  apellido_nombre: accused.apellidoNombre,
+                  menor_edad: accused.menorEdad || false,
+                  nacionalidad: accused.nacionalidad || null,
+                  juzgado_ufi: accused.juzgadoUfi || null,
+                  estado_procesal: accused.estadoProcesal || null,
+                  pena: accused.pena || null,
+                  juicio_abreviado: accused.juicioAbreviado || false,
+                  prision_perpetua: accused.prisionPerpetua || false,
+                  fecha_veredicto: accused.fechaVeredicto || null,
+                },
+              ])
+              .select()
+              .single()
+
+            if (accusedError) throw accusedError
+
+            if (accused.trialDates && Array.isArray(accused.trialDates)) {
+              for (const fecha of accused.trialDates) {
+                if (fecha) {
+                  await supabase.from("fechas_juicio").insert([
+                    {
+                      imputado_id: accusedData.id,
+                      fecha_audiencia: fecha,
+                    },
+                  ])
+                }
+              }
+            }
+
+            if (accused.resources && Array.isArray(accused.resources)) {
+              for (const resource of accused.resources) {
+                if (resource.titulo || resource.url || resource.archivo_path) {
+                  await supabase.from("recursos").insert([
+                    {
+                      imputado_id: accusedData.id,
+                      hecho_id: incidentData.id,
+                      tipo: resource.tipo || null,
+                      titulo: resource.titulo || null,
+                      url: resource.url || null,
+                      fuente: resource.fuente || null,
+                      descripcion: resource.descripcion || null,
+                      archivo_path: resource.archivo_path || null,
+                      archivo_nombre: resource.archivo_nombre || null,
+                      archivo_tipo: resource.archivo_tipo || null,
+                      archivo_size: resource.archivo_size || null,
+                    },
+                  ])
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (formData.followUp) {
+        const { error: followUpError } = await supabase.from("seguimiento").insert([
+          {
+            hecho_id: incidentData.id,
+            primer_contacto: formData.followUp.primerContacto || null,
+            como_llego_caso: formData.followUp.comoLlegoCaso || null,
+            miembro_asignado: formData.followUp.miembroAsignado || null,
+            contacto_familia: formData.followUp.contactoFamiliar || null,
+            tipo_acompanamiento: formData.followUp.tipoAcompanamiento || null,
+            abogado_querellante: formData.followUp.abogadoQuerellante || null,
+            amicus_curiae: formData.followUp.amicusCuriae || false,
+            notas_seguimiento: formData.followUp.notasSeguimiento || null,
+          },
+        ])
+
+        if (followUpError) throw followUpError
+      }
+
+      if (formData.resources && Array.isArray(formData.resources) && formData.resources.length > 0) {
+        for (const resource of formData.resources) {
+          if (resource.titulo || resource.url || resource.archivo_path) {
+            await supabase.from("recursos").insert([
+              {
+                hecho_id: incidentData.id,
+                tipo: resource.tipo || null,
+                titulo: resource.titulo || null,
+                url: resource.url || null,
+                fuente: resource.fuente || null,
+                descripcion: resource.descripcion || null,
+                archivo_path: resource.archivo_path || null,
+                archivo_nombre: resource.archivo_nombre || null,
+                archivo_tipo: resource.archivo_tipo || null,
+                archivo_size: resource.archivo_size || null,
+              },
+            ])
+          }
+        }
+      }
+
+      if (formData.victimResources && Array.isArray(formData.victimResources) && formData.victimResources.length > 0) {
+        for (const resource of formData.victimResources) {
+          if (resource.titulo || resource.url || resource.archivo_path) {
+            await supabase.from("recursos").insert([
+              {
+                victima_id: victimData.id,
+                tipo: resource.tipo || null,
+                titulo: resource.titulo || null,
+                url: resource.url || null,
+                fuente: resource.fuente || null,
+                descripcion: resource.descripcion || null,
+                archivo_path: resource.archivo_path || null,
+                archivo_nombre: resource.archivo_nombre || null,
+                archivo_tipo: resource.archivo_tipo || null,
+                archivo_size: resource.archivo_size || null,
+              },
+            ])
+          }
+        }
+      }
+
+      toast({
+        title: "Caso guardado",
+        description: "Caso guardado. Listo para cargar la siguiente víctima del mismo hecho.",
+      })
+
+      setFormData((prev) => ({
+        ...prev,
+        victim: getEmptyVictimData(),
+        victimResources: getEmptyVictimResources(),
+        accused: getEmptyAccusedData(),
+        resources: [],
+      }))
+
+      setActiveTab("victim")
+    } catch (error) {
+      console.error("Error saving case:", error)
+      toast({
+        title: "Error",
+        description: "No se pudo guardar el caso. Verifique la conexión a la base de datos.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSavingAndContinue(false)
+    }
+  }
+
+  const handleSave = async () => {
+    const supabase = createClient()
+    setIsSaving(true)
+
+    try {
       if (mode === "edit" && caseId) {
-        // UPDATE MODE
         const { error: victimError } = await supabase
           .from("victimas")
           .update({
@@ -269,7 +482,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         }
 
-        // Delete and re-insert imputados
         await supabase.from("imputados").delete().eq("hecho_id", hechoId)
 
         if (formData.accused && Array.isArray(formData.accused) && formData.accused.length > 0) {
@@ -296,7 +508,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
               if (accusedError) throw accusedError
 
-              // Insert fechas_juicio
               if (accused.trialDates && Array.isArray(accused.trialDates) && accused.trialDates.length > 0) {
                 for (const date of accused.trialDates) {
                   if (date) {
@@ -310,7 +521,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 }
               }
 
-              // Insert imputado resources
               if (accused.resources && Array.isArray(accused.resources) && accused.resources.length > 0) {
                 for (const resource of accused.resources) {
                   if (resource.titulo || resource.url || resource.archivo_path) {
@@ -336,7 +546,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         }
 
-        // Delete and re-insert seguimiento
         await supabase.from("seguimiento").delete().eq("hecho_id", hechoId)
 
         if (formData.followUp) {
@@ -357,7 +566,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           if (followUpError) throw followUpError
         }
 
-        // Delete and re-insert recursos
         await supabase.from("recursos").delete().eq("hecho_id", hechoId).is("imputado_id", null)
 
         if (formData.resources && Array.isArray(formData.resources) && formData.resources.length > 0) {
@@ -381,8 +589,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         }
 
-        // Delete and re-insert victim resources
         await supabase.from("recursos").delete().eq("victima_id", caseId).is("hecho_id", null).is("imputado_id", null)
+
         if (
           formData.victimResources &&
           Array.isArray(formData.victimResources) &&
@@ -408,7 +616,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         }
       } else {
-        // CREATE MODE
         const { data: victimData, error: victimError } = await supabase
           .from("victimas")
           .insert([
@@ -467,7 +674,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         }
 
-        // Insert imputados with resources
         if (formData.accused && Array.isArray(formData.accused) && formData.accused.length > 0) {
           for (const accused of formData.accused) {
             if (accused.apellidoNombre) {
@@ -492,7 +698,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
               if (accusedError) throw accusedError
 
-              // Insert trial dates
               if (accused.trialDates && Array.isArray(accused.trialDates)) {
                 for (const fecha of accused.trialDates) {
                   if (fecha) {
@@ -549,7 +754,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           if (followUpError) throw followUpError
         }
 
-        // Insert hecho resources
         if (formData.resources && Array.isArray(formData.resources) && formData.resources.length > 0) {
           for (const resource of formData.resources) {
             if (resource.titulo || resource.url || resource.archivo_path) {
@@ -571,7 +775,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         }
 
-        // Insert victim resources
         if (
           formData.victimResources &&
           Array.isArray(formData.victimResources) &&
@@ -656,10 +859,21 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {mode === "create" && (
+            <Button
+              onClick={handleSaveAndContinue}
+              disabled={isSaving || isSavingAndContinue}
+              variant="outline"
+              className="flex items-center gap-2 bg-transparent border-slate-300 hover:bg-slate-50"
+            >
+              <UserPlus className="w-4 h-4" />
+              {isSavingAndContinue ? "Guardando..." : "Guardar y Agregar Otra Víctima"}
+            </Button>
+          )}
           <Button
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || isSavingAndContinue}
             className="bg-slate-800 hover:bg-slate-700 flex items-center gap-2"
           >
             <Save className="w-4 h-4" />
