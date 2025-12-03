@@ -6,8 +6,21 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Trash2, ExternalLink } from "lucide-react"
+import { Plus, Trash2, Loader2 } from "lucide-react"
 import React from "react"
+import { ResourcesForm } from "./resources-form"
+import { useCountries } from "@/hooks/use-countries"
+
+const ESTADO_PROCESAL_OPTIONS = [
+  { value: "sospechoso", label: "Sospechoso" },
+  { value: "imputado_procesado", label: "Imputado/Procesado" },
+  { value: "a_juicio", label: "A juicio" },
+  { value: "sobreseido", label: "Sobreseído" },
+  { value: "condenado", label: "Condenado" },
+  { value: "absuelto", label: "Absuelto" },
+  { value: "prescripcion", label: "Prescripción" },
+  { value: "menor_inimputable", label: "Menor inimputable con medida de seguridad" },
+]
 
 interface AccusedFormProps {
   data: any[]
@@ -16,6 +29,7 @@ interface AccusedFormProps {
 
 export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
   const [totalInvolved, setTotalInvolved] = React.useState(data.length || 0)
+  const { countries, isLoading: isLoadingCountries } = useCountries()
 
   const addAccused = () => {
     const newAccused = {
@@ -24,14 +38,20 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
       alias: "",
       edad: "",
       nacionalidad: "",
+      documentoIdentidad: "",
+      tribunalFallo: "",
       menorEdad: false,
       juzgadoUfi: "",
       estadoProcesal: "",
-      trialDates: [], // Changed from single trialDate to array of dates
+      trialDates: [],
       fechaVeredicto: "",
       pena: "",
       juicioAbreviado: false,
-      prisionPerpetua: false, // Added Prisión Perpetua field
+      prisionPerpetua: false,
+      esExtranjero: false,
+      detenidoPrevio: false,
+      fallecido: false,
+      esReincidente: false,
       cargos: "",
       resources: [],
     }
@@ -71,43 +91,12 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
     }
   }
 
-  const addResource = (accusedId: number) => {
-    const newResource = {
-      id: Date.now(),
-      type: "",
-      title: "",
-      url: "",
-      source: "",
-      date: "",
-      description: "",
-    }
-    const accused = data.find((a) => a.id === accusedId)
-    if (accused) {
-      const updatedResources = [...(accused.resources || []), newResource]
-      updateAccused(accusedId, "resources", updatedResources)
-    }
-  }
-
-  const removeResource = (accusedId: number, resourceId: number) => {
-    const accused = data.find((a) => a.id === accusedId)
-    if (accused) {
-      const updatedResources = (accused.resources || []).filter((r: any) => r.id !== resourceId)
-      updateAccused(accusedId, "resources", updatedResources)
-    }
-  }
-
-  const updateResource = (accusedId: number, resourceId: number, field: string, value: string) => {
-    const accused = data.find((a) => a.id === accusedId)
-    if (accused) {
-      const updatedResources = (accused.resources || []).map((resource: any) =>
-        resource.id === resourceId ? { ...resource, [field]: value } : resource,
-      )
-      updateAccused(accusedId, "resources", updatedResources)
-    }
+  const updateResources = (accusedId: number, resources: any[]) => {
+    updateAccused(accusedId, "resources", resources)
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl mx-auto">
       <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
         <div className="flex items-center gap-4">
           <Label className="text-sm font-medium text-slate-700">Cantidad Total de Involucrados:</Label>
@@ -174,6 +163,16 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                   </div>
 
                   <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700">DNI / Documento</Label>
+                    <Input
+                      placeholder="Número de documento de identidad"
+                      value={accused.documentoIdentidad || ""}
+                      onChange={(e) => updateAccused(accused.id, "documentoIdentidad", e.target.value)}
+                      className="border-slate-300"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-slate-700">Edad</Label>
                     <Input
                       placeholder="Edad o edad aproximada"
@@ -185,12 +184,29 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
 
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-slate-700">Nacionalidad</Label>
-                    <Input
-                      placeholder="Nacionalidad del imputado"
+                    <Select
                       value={accused.nacionalidad || ""}
-                      onChange={(e) => updateAccused(accused.id, "nacionalidad", e.target.value)}
-                      className="border-slate-300"
-                    />
+                      onValueChange={(value) => updateAccused(accused.id, "nacionalidad", value)}
+                    >
+                      <SelectTrigger className="border-slate-300">
+                        <SelectValue
+                          placeholder={isLoadingCountries ? "Cargando países..." : "Seleccionar nacionalidad"}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {isLoadingCountries ? (
+                          <div className="flex items-center justify-center p-2">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          </div>
+                        ) : (
+                          countries.map((country) => (
+                            <SelectItem key={country.nameSpanish} value={country.nameSpanish}>
+                              {country.nameSpanish}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
@@ -213,15 +229,23 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                         <SelectValue placeholder="Seleccionar estado procesal" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="investigation">En investigación</SelectItem>
-                        <SelectItem value="prosecution">En proceso</SelectItem>
-                        <SelectItem value="trial">En juicio</SelectItem>
-                        <SelectItem value="convicted">Condenado</SelectItem>
-                        <SelectItem value="acquitted">Absuelto</SelectItem>
-                        <SelectItem value="dismissed">Sobreseído</SelectItem>
-                        <SelectItem value="prescription">Prescripción</SelectItem>
+                        {ESTADO_PROCESAL_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700">Tribunal que dictó fallo</Label>
+                    <Input
+                      placeholder="Nombre del tribunal"
+                      value={accused.tribunalFallo || ""}
+                      onChange={(e) => updateAccused(accused.id, "tribunalFallo", e.target.value)}
+                      className="border-slate-300"
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -287,38 +311,85 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                   )}
                 </div>
 
-                <div className="flex flex-col space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`minor-${accused.id}`}
-                      checked={accused.menorEdad || false}
-                      onCheckedChange={(checked) => updateAccused(accused.id, "menorEdad", checked)}
-                    />
-                    <Label htmlFor={`minor-${accused.id}`} className="text-sm font-medium text-slate-700">
-                      Menor de Edad
-                    </Label>
-                  </div>
+                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                  <Label className="text-sm font-medium text-slate-700 mb-3 block">Opciones Adicionales</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`minor-${accused.id}`}
+                        checked={accused.menorEdad || false}
+                        onCheckedChange={(checked) => updateAccused(accused.id, "menorEdad", checked)}
+                      />
+                      <Label htmlFor={`minor-${accused.id}`} className="text-sm text-slate-700">
+                        Menor de Edad
+                      </Label>
+                    </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`abbreviated-${accused.id}`}
-                      checked={accused.juicioAbreviado || false}
-                      onCheckedChange={(checked) => updateAccused(accused.id, "juicioAbreviado", checked)}
-                    />
-                    <Label htmlFor={`abbreviated-${accused.id}`} className="text-sm font-medium text-slate-700">
-                      Juicio Abreviado
-                    </Label>
-                  </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`extranjero-${accused.id}`}
+                        checked={accused.esExtranjero || false}
+                        onCheckedChange={(checked) => updateAccused(accused.id, "esExtranjero", checked)}
+                      />
+                      <Label htmlFor={`extranjero-${accused.id}`} className="text-sm text-slate-700">
+                        Extranjero
+                      </Label>
+                    </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`life-sentence-${accused.id}`}
-                      checked={accused.prisionPerpetua || false}
-                      onCheckedChange={(checked) => updateAccused(accused.id, "prisionPerpetua", checked)}
-                    />
-                    <Label htmlFor={`life-sentence-${accused.id}`} className="text-sm font-medium text-slate-700">
-                      Prisión Perpetua
-                    </Label>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`detenido-${accused.id}`}
+                        checked={accused.detenidoPrevio || false}
+                        onCheckedChange={(checked) => updateAccused(accused.id, "detenidoPrevio", checked)}
+                      />
+                      <Label htmlFor={`detenido-${accused.id}`} className="text-sm text-slate-700">
+                        Detenido antes del juicio
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`abbreviated-${accused.id}`}
+                        checked={accused.juicioAbreviado || false}
+                        onCheckedChange={(checked) => updateAccused(accused.id, "juicioAbreviado", checked)}
+                      />
+                      <Label htmlFor={`abbreviated-${accused.id}`} className="text-sm text-slate-700">
+                        Juicio Abreviado
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`life-sentence-${accused.id}`}
+                        checked={accused.prisionPerpetua || false}
+                        onCheckedChange={(checked) => updateAccused(accused.id, "prisionPerpetua", checked)}
+                      />
+                      <Label htmlFor={`life-sentence-${accused.id}`} className="text-sm text-slate-700">
+                        Prisión Perpetua
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`fallecido-${accused.id}`}
+                        checked={accused.fallecido || false}
+                        onCheckedChange={(checked) => updateAccused(accused.id, "fallecido", checked)}
+                      />
+                      <Label htmlFor={`fallecido-${accused.id}`} className="text-sm text-slate-700">
+                        Muerte
+                      </Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`reincidente-${accused.id}`}
+                        checked={accused.esReincidente || false}
+                        onCheckedChange={(checked) => updateAccused(accused.id, "esReincidente", checked)}
+                      />
+                      <Label htmlFor={`reincidente-${accused.id}`} className="text-sm text-slate-700">
+                        Reincidencia
+                      </Label>
+                    </div>
                   </div>
                 </div>
 
@@ -334,128 +405,14 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                 </div>
 
                 <div className="border-t pt-4 mt-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-md font-semibold text-slate-900 font-heading">Recursos del Imputado</h4>
-                    <Button
-                      onClick={() => addResource(accused.id)}
-                      size="sm"
-                      variant="outline"
-                      className="flex items-center gap-2"
-                    >
-                      <Plus className="w-3 h-3" />
-                      Agregar Recurso
-                    </Button>
-                  </div>
-
-                  {!accused.resources || accused.resources.length === 0 ? (
-                    <div className="text-center py-4 text-slate-500 text-sm">
-                      <p>No hay recursos registrados para este imputado.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {accused.resources.map((resource: any, resourceIndex: number) => (
-                        <Card key={resource.id} className="border-slate-100 bg-slate-50">
-                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-heading">Recurso #{resourceIndex + 1}</CardTitle>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeResource(accused.id, resource.id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50 h-6 w-6 p-0"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              <div className="space-y-1">
-                                <Label className="text-xs font-medium text-slate-600">Tipo</Label>
-                                <Select
-                                  value={resource.type || ""}
-                                  onValueChange={(value) => updateResource(accused.id, resource.id, "type", value)}
-                                >
-                                  <SelectTrigger className="border-slate-300 h-8 text-sm">
-                                    <SelectValue placeholder="Tipo" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="news">Noticia</SelectItem>
-                                    <SelectItem value="video">Video</SelectItem>
-                                    <SelectItem value="photo">Fotografía</SelectItem>
-                                    <SelectItem value="document">Documento</SelectItem>
-                                    <SelectItem value="social">Red Social</SelectItem>
-                                    <SelectItem value="other">Otro</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              <div className="space-y-1">
-                                <Label className="text-xs font-medium text-slate-600">Fecha</Label>
-                                <Input
-                                  type="date"
-                                  value={resource.date || ""}
-                                  onChange={(e) => updateResource(accused.id, resource.id, "date", e.target.value)}
-                                  className="border-slate-300 h-8 text-sm"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="space-y-1">
-                              <Label className="text-xs font-medium text-slate-600">Título</Label>
-                              <Input
-                                placeholder="Título del recurso"
-                                value={resource.title || ""}
-                                onChange={(e) => updateResource(accused.id, resource.id, "title", e.target.value)}
-                                className="border-slate-300 h-8 text-sm"
-                              />
-                            </div>
-
-                            <div className="space-y-1">
-                              <Label className="text-xs font-medium text-slate-600">URL/Enlace</Label>
-                              <div className="flex gap-2">
-                                <Input
-                                  placeholder="https://ejemplo.com"
-                                  value={resource.url || ""}
-                                  onChange={(e) => updateResource(accused.id, resource.id, "url", e.target.value)}
-                                  className="border-slate-300 h-8 text-sm flex-1"
-                                />
-                                {resource.url && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => window.open(resource.url, "_blank")}
-                                    className="h-8 w-8 p-0"
-                                  >
-                                    <ExternalLink className="w-3 h-3" />
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="space-y-1">
-                              <Label className="text-xs font-medium text-slate-600">Fuente</Label>
-                              <Input
-                                placeholder="Medio o fuente"
-                                value={resource.source || ""}
-                                onChange={(e) => updateResource(accused.id, resource.id, "source", e.target.value)}
-                                className="border-slate-300 h-8 text-sm"
-                              />
-                            </div>
-
-                            <div className="space-y-1">
-                              <Label className="text-xs font-medium text-slate-600">Descripción</Label>
-                              <Textarea
-                                placeholder="Descripción del recurso"
-                                value={resource.description || ""}
-                                onChange={(e) => updateResource(accused.id, resource.id, "description", e.target.value)}
-                                className="border-slate-300 text-sm"
-                                rows={2}
-                              />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                  <h4 className="text-md font-semibold text-slate-900 font-heading mb-2">Recursos del Imputado</h4>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Fotos, documentos, noticias y enlaces relacionados con este imputado.
+                  </p>
+                  <ResourcesForm
+                    data={accused.resources || []}
+                    onChange={(resources) => updateResources(accused.id, resources)}
+                  />
                 </div>
               </CardContent>
             </Card>

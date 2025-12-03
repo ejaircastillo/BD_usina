@@ -6,6 +6,8 @@ import { useEffect, useState, useRef } from "react"
 import { usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
+const DEV_BYPASS_AUTH = false
+
 interface AuthGuardProps {
   children: React.ReactNode
 }

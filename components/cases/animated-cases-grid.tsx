@@ -16,7 +16,6 @@ interface CaseData {
   status: string
   familyContactName: string
   familyRelationship: string
-  familyContactPhone: string
 }
 
 const getStatusColor = (status: string) => {
@@ -72,11 +71,6 @@ function CaseCard({ case: caseData }: CaseCardProps) {
                 <span className="line-clamp-1">
                   {caseData.familyContactName} - {caseData.familyRelationship}
                 </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 text-blue-600 text-center">📞</span>
-                <span className="line-clamp-1 font-mono text-xs">{caseData.familyContactPhone}</span>
               </div>
             </div>
           </div>
@@ -149,7 +143,6 @@ export function AnimatedCasesGrid() {
         .select(`
           id,
           nombre_completo,
-          telefono_contacto_familiar,
           hechos (
             id,
             fecha_hecho,
@@ -178,14 +171,13 @@ export function AnimatedCasesGrid() {
 
         return {
           id: victim.id,
-          victimName: victim.nombre_completo,
+          victimName: victim.nombre_completo || "Sin nombre",
           incidentDate: incident.fecha_hecho || new Date().toISOString(),
           location: incident.lugar_especifico || "No especificado",
           province: incident.provincia || "No especificado",
           status: imputado.estado_procesal || "En investigación",
           familyContactName: familyContactParts[0] || "No especificado",
           familyRelationship: familyContactParts[1] || "Familiar",
-          familyContactPhone: victim.telefono_contacto_familiar || "No especificado",
         }
       })
 
