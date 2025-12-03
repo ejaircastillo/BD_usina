@@ -182,6 +182,14 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           comoLlegoCaso: hecho?.seguimiento?.[0]?.como_llego_caso || "",
           primerContacto: hecho?.seguimiento?.[0]?.primer_contacto || false,
           notasSeguimiento: hecho?.seguimiento?.[0]?.notas_seguimiento || "",
+          emailContacto: hecho?.seguimiento?.[0]?.email_contacto || "",
+          direccionContacto: hecho?.seguimiento?.[0]?.direccion_contacto || "",
+          telefonoMiembro: hecho?.seguimiento?.[0]?.telefono_miembro || "",
+          emailMiembro: hecho?.seguimiento?.[0]?.email_miembro || "",
+          fechaAsignacion: hecho?.seguimiento?.[0]?.fecha_asignacion || "",
+          proximasAcciones: hecho?.seguimiento?.[0]?.proximas_acciones || "",
+          parentescoContacto: hecho?.seguimiento?.[0]?.parentesco_contacto || "",
+          parentescoOtro: "",
         },
         resources: (hecho?.recursos || [])
           .filter((r: any) => !r.imputado_id)
@@ -357,6 +365,14 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             abogado_querellante: formData.followUp.abogadoQuerellante || null,
             amicus_curiae: formData.followUp.amicusCuriae || false,
             notas_seguimiento: formData.followUp.notasSeguimiento || null,
+            email_contacto: formData.followUp.emailContacto || null,
+            direccion_contacto: formData.followUp.direccionContacto || null,
+            telefono_miembro: formData.followUp.telefonoMiembro || null,
+            email_miembro: formData.followUp.emailMiembro || null,
+            fecha_asignacion: formData.followUp.fechaAsignacion || null,
+            proximas_acciones: formData.followUp.proximasAcciones || null,
+            parentesco_contacto: formData.followUp.parentescoContacto || null,
+            parentesco_otro: formData.followUp.parentescoOtro || null,
           },
         ])
 
@@ -563,6 +579,14 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               abogado_querellante: formData.followUp.abogadoQuerellante || null,
               amicus_curiae: formData.followUp.amicusCuriae || false,
               notas_seguimiento: formData.followUp.notasSeguimiento || null,
+              email_contacto: formData.followUp.emailContacto || null,
+              direccion_contacto: formData.followUp.direccionContacto || null,
+              telefono_miembro: formData.followUp.telefonoMiembro || null,
+              email_miembro: formData.followUp.emailMiembro || null,
+              fecha_asignacion: formData.followUp.fechaAsignacion || null,
+              proximas_acciones: formData.followUp.proximasAcciones || null,
+              parentesco_contacto: formData.followUp.parentescoContacto || null,
+              parentesco_otro: formData.followUp.parentescoOtro || null,
             },
           ])
 
@@ -738,6 +762,14 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               abogado_querellante: formData.followUp.abogadoQuerellante || null,
               amicus_curiae: formData.followUp.amicusCuriae || false,
               notas_seguimiento: formData.followUp.notasSeguimiento || null,
+              email_contacto: formData.followUp.emailContacto || null,
+              direccion_contacto: formData.followUp.direccionContacto || null,
+              telefono_miembro: formData.followUp.telefonoMiembro || null,
+              email_miembro: formData.followUp.emailMiembro || null,
+              fecha_asignacion: formData.followUp.fechaAsignacion || null,
+              proximas_acciones: formData.followUp.proximasAcciones || null,
+              parentesco_contacto: formData.followUp.parentescoContacto || null,
+              parentesco_otro: formData.followUp.parentescoOtro || null,
             },
           ])
 

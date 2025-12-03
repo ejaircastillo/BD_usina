@@ -4,18 +4,24 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface FollowUpFormProps {
   data: any
   onChange: (data: any) => void
 }
 
-const members = [
-  "Dr. María González",
-  "Dr. Carlos Rodríguez",
-  "Dra. Ana Martínez",
-  "Dr. Luis Fernández",
-  "Dra. Carmen López",
+const PARENTESCO_OPTIONS = [
+  "Padre",
+  "Madre",
+  "Hijo/a",
+  "Hermano/a",
+  "Esposo/a",
+  "Pareja",
+  "Tío/a",
+  "Abuelo/a",
+  "Nieto/a",
+  "Otro",
 ]
 
 export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
@@ -41,8 +47,23 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
     }
   }
 
+  const handleParentescoChange = (value: string) => {
+    if (value !== "Otro") {
+      onChange({
+        ...data,
+        parentescoContacto: value,
+        parentescoOtro: "",
+      })
+    } else {
+      onChange({
+        ...data,
+        parentescoContacto: value,
+      })
+    }
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl mx-auto">
       <div>
         <h3 className="text-lg font-semibold text-slate-900 font-heading mb-4">Seguimiento de la ONG</h3>
 
@@ -125,19 +146,16 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-700">Miembro Asignado</Label>
+            <Label htmlFor="miembroAsignado" className="text-sm font-medium text-slate-700">
+              Miembro Asignado
+            </Label>
             <Input
-              placeholder="Escribir nombre del miembro de Usina de Justicia"
+              id="miembroAsignado"
+              placeholder="Nombre del miembro de Usina de Justicia"
               value={data.miembroAsignado || ""}
               onChange={(e) => handleChange("miembroAsignado", e.target.value)}
               className="border-slate-300"
-              list="members-list"
             />
-            <datalist id="members-list">
-              {members.map((member) => (
-                <option key={member} value={member} />
-              ))}
-            </datalist>
           </div>
 
           <div className="space-y-2">
@@ -186,12 +204,43 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-700">Parentesco</Label>
+              <Select value={data.parentescoContacto || ""} onValueChange={handleParentescoChange}>
+                <SelectTrigger className="border-slate-300">
+                  <SelectValue placeholder="Seleccionar parentesco" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PARENTESCO_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {data.parentescoContacto === "Otro" && (
+              <div className="space-y-2">
+                <Label htmlFor="parentescoOtro" className="text-sm font-medium text-slate-700">
+                  Especificar Parentesco
+                </Label>
+                <Input
+                  id="parentescoOtro"
+                  placeholder="Ej: Cuñado, Vecino, Amigo..."
+                  value={data.parentescoOtro || ""}
+                  onChange={(e) => handleChange("parentescoOtro", e.target.value)}
+                  className="border-slate-300"
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
               <Label htmlFor="familyContact" className="text-sm font-medium text-slate-700">
                 Nombre del Contacto
               </Label>
               <Input
                 id="familyContact"
-                placeholder="Nombre y relación (ej: Roberto Rodríguez - hermano)"
+                placeholder="Nombre completo del familiar"
                 value={data.contactoFamiliar || ""}
                 onChange={(e) => handleChange("contactoFamiliar", e.target.value)}
                 className="border-slate-300"

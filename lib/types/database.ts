@@ -102,6 +102,7 @@ export interface Seguimiento {
   email_miembro: string | null
   fecha_asignacion: string | null
   proximas_acciones: string | null
+  parentesco_contacto: string | null
   created_at: string
   updated_at: string
 }
