@@ -146,38 +146,37 @@ export function AnimatedCasesGrid() {
           hechos (
             id,
             fecha_hecho,
-            lugar_especifico,
+            municipio,
             provincia,
             seguimiento (
-              contacto_familia
+              contacto_familia,
+              parentesco_contacto
             ),
             imputados (
               estado_procesal
             )
           )
         `)
+        .order("created_at", { ascending: false })
         .limit(12)
 
       if (victimError) throw victimError
 
       // Transform data to match component interface
-      const transformedCases: CaseData[] = victimData.map((victim: any) => {
+      const transformedCases: CaseData[] = (victimData || []).map((victim: any) => {
         const incident = victim.hechos?.[0] || {}
         const followUp = incident.seguimiento?.[0] || {}
         const imputado = incident.imputados?.[0] || {}
-
-        // Parse family contact to extract name and relationship
-        const familyContactParts = followUp.contacto_familia?.split(" - ") || ["", ""]
 
         return {
           id: victim.id,
           victimName: victim.nombre_completo || "Sin nombre",
           incidentDate: incident.fecha_hecho || new Date().toISOString(),
-          location: incident.lugar_especifico || "No especificado",
+          location: incident.municipio || "No especificado",
           province: incident.provincia || "No especificado",
           status: imputado.estado_procesal || "En investigación",
-          familyContactName: familyContactParts[0] || "No especificado",
-          familyRelationship: familyContactParts[1] || "Familiar",
+          familyContactName: followUp.contacto_familia || "No especificado",
+          familyRelationship: followUp.parentesco_contacto || "Familiar",
         }
       })
 
