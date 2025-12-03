@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 
 interface Provincia {
   id: string
@@ -20,20 +20,24 @@ interface GeorefMunicipiosResponse {
   municipios: Municipio[]
 }
 
+interface GeorefLocalidadesResponse {
+  localidades: { id: string; nombre: string }[]
+}
+
 const GEOREF_BASE_URL = "https://apis.datos.gob.ar/georef/api"
 
 export function useArgentinaGeo(selectedProvincia?: string) {
   const [provincias, setProvincias] = useState<Provincia[]>([])
   const [municipios, setMunicipios] = useState<Municipio[]>([])
-  const [loadingProvincias, setLoadingProvincias] = useState(true)
-  const [loadingMunicipios, setLoadingMunicipios] = useState(false)
+  const [isLoadingProvincias, setIsLoadingProvincias] = useState(true)
+  const [isLoadingMunicipios, setIsLoadingMunicipios] = useState(false)
   const [errorProvincias, setErrorProvincias] = useState<string | null>(null)
   const [errorMunicipios, setErrorMunicipios] = useState<string | null>(null)
 
   // Fetch provincias on mount
   useEffect(() => {
     const fetchProvincias = async () => {
-      setLoadingProvincias(true)
+      setIsLoadingProvincias(true)
       setErrorProvincias(null)
 
       try {
@@ -46,7 +50,7 @@ export function useArgentinaGeo(selectedProvincia?: string) {
         const data: GeorefProvinciasResponse = await response.json()
         setProvincias(data.provincias || [])
       } catch (error) {
-        console.error("[v0] Error fetching provincias:", error)
+        console.error("Error fetching provincias:", error)
         setErrorProvincias("No se pudieron cargar las provincias")
         // Fallback to static list if API fails
         setProvincias([
@@ -76,66 +80,71 @@ export function useArgentinaGeo(selectedProvincia?: string) {
           { id: "24", nombre: "Tucumán" },
         ])
       } finally {
-        setLoadingProvincias(false)
+        setIsLoadingProvincias(false)
       }
     }
 
     fetchProvincias()
   }, [])
 
-  // Fetch municipios when provincia changes
-  useEffect(() => {
-    if (!selectedProvincia) {
+  const fetchMunicipios = useCallback(async (provincia: string) => {
+    if (!provincia) {
       setMunicipios([])
       return
     }
 
-    const fetchMunicipios = async () => {
-      setLoadingMunicipios(true)
-      setErrorMunicipios(null)
-      setMunicipios([])
+    setIsLoadingMunicipios(true)
+    setErrorMunicipios(null)
+    setMunicipios([])
 
-      try {
-        const encodedProvincia = encodeURIComponent(selectedProvincia)
-        const response = await fetch(
-          `${GEOREF_BASE_URL}/municipios?provincia=${encodedProvincia}&orden=nombre&max=1000`,
-        )
+    try {
+      const encodedProvincia = encodeURIComponent(provincia)
+      const response = await fetch(`${GEOREF_BASE_URL}/municipios?provincia=${encodedProvincia}&orden=nombre&max=1000`)
 
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`)
-        }
-
-        const data: GeorefMunicipiosResponse = await response.json()
-
-        // If no municipios found, try with localidades as fallback
-        if (!data.municipios || data.municipios.length === 0) {
-          const localidadesResponse = await fetch(
-            `${GEOREF_BASE_URL}/localidades?provincia=${encodedProvincia}&orden=nombre&max=1000`,
-          )
-          if (localidadesResponse.ok) {
-            const localidadesData = await localidadesResponse.json()
-            setMunicipios(localidadesData.localidades || [])
-          }
-        } else {
-          setMunicipios(data.municipios)
-        }
-      } catch (error) {
-        console.error("[v0] Error fetching municipios:", error)
-        setErrorMunicipios("No se pudieron cargar los municipios")
-      } finally {
-        setLoadingMunicipios(false)
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`)
       }
-    }
 
-    fetchMunicipios()
-  }, [selectedProvincia])
+      const data: GeorefMunicipiosResponse = await response.json()
+
+      // If no municipios found, try with localidades as fallback
+      if (!data.municipios || data.municipios.length === 0) {
+        const localidadesResponse = await fetch(
+          `${GEOREF_BASE_URL}/localidades?provincia=${encodedProvincia}&orden=nombre&max=1000`,
+        )
+        if (localidadesResponse.ok) {
+          const localidadesData: GeorefLocalidadesResponse = await localidadesResponse.json()
+          setMunicipios(localidadesData.localidades || [])
+        }
+      } else {
+        setMunicipios(data.municipios)
+      }
+    } catch (error) {
+      console.error("Error fetching municipios:", error)
+      setErrorMunicipios("No se pudieron cargar los municipios")
+    } finally {
+      setIsLoadingMunicipios(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (selectedProvincia) {
+      fetchMunicipios(selectedProvincia)
+    } else {
+      setMunicipios([])
+    }
+  }, [selectedProvincia, fetchMunicipios])
 
   return {
     provincias,
     municipios,
-    loadingProvincias,
-    loadingMunicipios,
+    isLoadingProvincias,
+    isLoadingMunicipios,
+    // Keep old names for backwards compatibility
+    loadingProvincias: isLoadingProvincias,
+    loadingMunicipios: isLoadingMunicipios,
     errorProvincias,
     errorMunicipios,
+    fetchMunicipios,
   }
 }

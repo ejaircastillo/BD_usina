@@ -396,8 +396,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         ...prev,
         victim: getEmptyVictimData(),
         victimResources: getEmptyVictimResources(),
-        accused: getEmptyAccusedData(),
-        resources: [],
       }))
 
       setActiveTab("victim")
