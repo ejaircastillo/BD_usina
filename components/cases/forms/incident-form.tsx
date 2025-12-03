@@ -34,26 +34,22 @@ interface IncidentFormProps {
   onChange: (data: any) => void
 }
 
-const crimeTypes = [
-  "Femicidio",
-  "Femicidio Vinculado",
-  "Transfemicidio",
-  "Lesbicidio",
-  "Tentativa de Femicidio",
-  "Suicidio Feminicida",
-  "Otro",
-]
+const crimeTypes = ["Homicidio", "Femicidio", "Muerte dudosa"]
 
 const weaponTypes = [
-  "Arma de Fuego",
-  "Arma Blanca",
-  "Golpes / Fuerza Física",
-  "Asfixia / Estrangulamiento",
-  "Fuego / Quemaduras",
+  "Arma de fuego",
+  "Arma blanca",
+  "Objeto contundente",
+  "Golpes",
+  "Ahorcamiento/Asfixia",
+  "Quemaduras",
+  "Arrollamiento por rodados o tren",
+  "Precipitación al vacío",
   "Envenenamiento",
-  "Atropellamiento",
-  "Otro",
-  "Sin Datos",
+  "Varios medios combinados",
+  "Violación seguida de muerte",
+  "Otra arma o mecanismo",
+  "Sin determinar",
 ]
 
 const locationTypes = [
@@ -123,7 +119,7 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
         <h3 className="text-lg font-semibold text-slate-900 font-heading mb-4">Clasificación del Hecho</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-700">Tipo de Crimen *</Label>
+            <Label className="text-sm font-medium text-slate-700">Tipo de Crimen</Label>
             <Select value={data.tipoCrimen || ""} onValueChange={(value) => handleChange("tipoCrimen", value)}>
               <SelectTrigger className="border-slate-300">
                 <SelectValue placeholder="Seleccionar tipo de crimen" />
@@ -162,7 +158,7 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="incidentDate" className="text-sm font-medium text-slate-700">
-              Fecha del Hecho *
+              Fecha del Hecho
             </Label>
             <Input
               id="incidentDate"
@@ -192,7 +188,7 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
         <h3 className="text-lg font-semibold text-slate-900 font-heading mb-4">Ubicación del Hecho</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-700">Provincia *</Label>
+            <Label className="text-sm font-medium text-slate-700">Provincia</Label>
             <Select value={data.provincia || ""} onValueChange={handleProvinciaChange} disabled={loadingProvincias}>
               <SelectTrigger className="border-slate-300">
                 {loadingProvincias ? (
