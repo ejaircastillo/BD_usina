@@ -69,7 +69,8 @@ function CaseCard({ case: caseData }: CaseCardProps) {
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-blue-600" />
                 <span className="line-clamp-1">
-                  {caseData.familyContactName} - {caseData.familyRelationship}
+                  {caseData.familyContactName}
+                  {caseData.familyRelationship && ` - ${caseData.familyRelationship}`}
                 </span>
               </div>
             </div>
@@ -90,7 +91,6 @@ function ScrollingRow({ cases, direction, speed }: ScrollingRowProps) {
   const [duplicatedCases, setDuplicatedCases] = useState<CaseData[]>([])
 
   useEffect(() => {
-    // Duplicate cases to create seamless loop
     setDuplicatedCases([...cases, ...cases, ...cases])
   }, [cases])
 
@@ -123,7 +123,6 @@ export function AnimatedCasesGrid() {
 
   useEffect(() => {
     if (cases.length > 0) {
-      // Split cases into multiple rows
       const chunkSize = 4
       const caseRows = []
       for (let i = 0; i < cases.length; i += chunkSize) {
@@ -138,7 +137,6 @@ export function AnimatedCasesGrid() {
       setIsLoading(true)
       setError(null)
 
-      // Query from hechos table which has the relationships
       const { data: hechosData, error: hechosError } = await supabase
         .from("hechos")
         .select(`
@@ -147,16 +145,9 @@ export function AnimatedCasesGrid() {
           municipio,
           provincia,
           victima_id,
-          victimas!inner (
+          victimas (
             id,
             nombre_completo
-          ),
-          seguimiento (
-            contacto_familia,
-            parentesco_contacto
-          ),
-          imputados (
-            estado_procesal
           )
         `)
         .order("created_at", { ascending: false })
@@ -164,27 +155,41 @@ export function AnimatedCasesGrid() {
 
       if (hechosError) throw hechosError
 
-      // Transform data to match component interface
-      const transformedCases: CaseData[] = (hechosData || []).map((hecho: any) => {
-        const victim = hecho.victimas || {}
-        const followUp = hecho.seguimiento?.[0] || {}
-        const imputado = hecho.imputados?.[0] || {}
+      const transformedCases: CaseData[] = await Promise.all(
+        (hechosData || []).map(async (hecho: any) => {
+          const victima = hecho.victimas || {}
 
-        return {
-          id: victim.id || hecho.victima_id,
-          victimName: victim.nombre_completo || "Sin nombre",
-          incidentDate: hecho.fecha_hecho || new Date().toISOString(),
-          location: hecho.municipio || "No especificado",
-          province: hecho.provincia || "No especificado",
-          status: imputado.estado_procesal || "En investigación",
-          familyContactName: followUp.contacto_familia || "No especificado",
-          familyRelationship: followUp.parentesco_contacto || "Familiar",
-        }
-      })
+          const { data: casoData } = await supabase
+            .from("casos")
+            .select("id, estado_general")
+            .eq("hecho_id", hecho.id)
+            .limit(1)
+
+          const caso = casoData?.[0]
+
+          const { data: seguimientoData } = await supabase
+            .from("seguimiento")
+            .select("contacto_familia, parentesco_contacto")
+            .eq("hecho_id", hecho.id)
+            .limit(1)
+          const followUp = seguimientoData?.[0] || {}
+
+          return {
+            id: caso?.id || victima.id || hecho.id,
+            victimName: victima.nombre_completo || "Sin nombre",
+            incidentDate: hecho.fecha_hecho || new Date().toISOString(),
+            location: hecho.municipio || hecho.provincia || "No especificado",
+            province: hecho.provincia || "No especificado",
+            status: caso?.estado_general || "En investigación",
+            familyContactName: followUp.contacto_familia || "No especificado",
+            familyRelationship: followUp.parentesco_contacto || "Familiar",
+          }
+        }),
+      )
 
       setCases(transformedCases)
-    } catch (err: any) {
-      console.error("Error fetching cases:", err?.message || err)
+    } catch (err) {
+      console.error("Error fetching cases:", err)
       setError("Error al cargar los casos")
     } finally {
       setIsLoading(false)

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, User, Loader2, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react"
+import { MapPin, User, Loader2, ChevronLeft, ChevronRight, ArrowLeft, Phone } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { CasesFilters } from "@/components/cases/cases-filters"
 
@@ -66,20 +66,24 @@ function CaseCard({ case: caseData }: CaseCardProps) {
             <div className="space-y-2 text-sm text-slate-600">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-blue-600" />
-                <span className="line-clamp-1">{caseData.location}</span>
+                <span className="line-clamp-1">
+                  {caseData.location}, {caseData.province}
+                </span>
               </div>
 
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-blue-600" />
                 <span className="line-clamp-1">
-                  {caseData.familyContactName} - {caseData.familyRelationship}
+                  {caseData.familyContactName} {caseData.familyRelationship ? `- ${caseData.familyRelationship}` : ""}
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 text-blue-600 text-center">📞</span>
-                <span className="line-clamp-1 font-mono text-xs">{caseData.familyContactPhone}</span>
-              </div>
+              {caseData.familyContactPhone && caseData.familyContactPhone !== "No especificado" && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-blue-600" />
+                  <span className="line-clamp-1 font-mono text-xs">{caseData.familyContactPhone}</span>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
@@ -120,47 +124,55 @@ export default function CasosPage() {
       setIsLoading(true)
       setError(null)
 
-      const { data: victimData, error: victimError } = await supabase.from("victimas").select(`
+      const { data: hechosData, error: hechosError } = await supabase
+        .from("hechos")
+        .select(`
           id,
-          nombre_completo,
-          telefono_contacto_familiar,
-          hechos (
+          fecha_hecho,
+          municipio,
+          provincia,
+          victima_id,
+          victimas (
             id,
-            fecha_hecho,
-            lugar_especifico,
-            provincia,
-            seguimiento (
-              contacto_familia
-            ),
-            imputados (
-              estado_procesal
-            )
+            nombre_completo
           )
         `)
+        .order("created_at", { ascending: false })
 
-      if (victimError) throw victimError
+      if (hechosError) throw hechosError
 
-      // Transform data to match component interface
-      const transformedCases: CaseData[] = victimData.map((victim: any) => {
-        const incident = victim.hechos?.[0] || {}
-        const followUp = incident.seguimiento?.[0] || {}
-        const imputado = incident.imputados?.[0] || {}
+      const transformedCases: CaseData[] = await Promise.all(
+        (hechosData || []).map(async (hecho: any) => {
+          const victima = hecho.victimas || {}
 
-        // Parse family contact to extract name and relationship
-        const familyContactParts = followUp.contacto_familia?.split(" - ") || ["", ""]
+          const { data: casoData } = await supabase
+            .from("casos")
+            .select("id, estado_general")
+            .eq("hecho_id", hecho.id)
+            .limit(1)
 
-        return {
-          id: victim.id,
-          victimName: victim.nombre_completo,
-          incidentDate: incident.fecha_hecho || new Date().toISOString(),
-          location: incident.lugar_especifico || "No especificado",
-          province: incident.provincia || "No especificado",
-          status: imputado.estado_procesal || "En investigación",
-          familyContactName: familyContactParts[0] || "No especificado",
-          familyRelationship: familyContactParts[1] || "Familiar",
-          familyContactPhone: victim.telefono_contacto_familiar || "No especificado",
-        }
-      })
+          const caso = casoData?.[0]
+
+          const { data: seguimientoData } = await supabase
+            .from("seguimiento")
+            .select("contacto_familia, parentesco_contacto, telefono_contacto")
+            .eq("hecho_id", hecho.id)
+            .limit(1)
+          const followUp = seguimientoData?.[0] || {}
+
+          return {
+            id: caso?.id || victima.id || hecho.id,
+            victimName: victima.nombre_completo || "Sin nombre",
+            incidentDate: hecho.fecha_hecho || new Date().toISOString(),
+            location: hecho.municipio || "No especificado",
+            province: hecho.provincia || "No especificado",
+            status: caso?.estado_general || "En investigación",
+            familyContactName: followUp.contacto_familia || "No especificado",
+            familyRelationship: followUp.parentesco_contacto || "",
+            familyContactPhone: followUp.telefono_contacto || "No especificado",
+          }
+        }),
+      )
 
       setCases(transformedCases)
     } catch (err) {
@@ -174,7 +186,6 @@ export default function CasosPage() {
   const applyFilters = () => {
     let filtered = [...cases]
 
-    // Apply search term filter
     if (filters.searchTerm) {
       const searchLower = filters.searchTerm.toLowerCase()
       filtered = filtered.filter(
@@ -185,7 +196,6 @@ export default function CasosPage() {
       )
     }
 
-    // Apply date filters
     if (filters.dateFrom) {
       filtered = filtered.filter((caseData) => caseData.incidentDate >= filters.dateFrom)
     }
@@ -193,31 +203,27 @@ export default function CasosPage() {
       filtered = filtered.filter((caseData) => caseData.incidentDate <= filters.dateTo)
     }
 
-    // Apply province filter
     if (filters.province) {
       filtered = filtered.filter((caseData) => caseData.province === filters.province)
     }
 
-    // Apply location filter
     if (filters.location) {
       const locationLower = filters.location.toLowerCase()
       filtered = filtered.filter((caseData) => caseData.location.toLowerCase().includes(locationLower))
     }
 
-    // Apply status filter
     if (filters.status) {
       filtered = filtered.filter((caseData) => caseData.status === filters.status)
     }
 
     setFilteredCases(filtered)
-    setCurrentPage(1) // Reset to first page when filters change
+    setCurrentPage(1)
   }
 
   const handleFiltersChange = (newFilters: typeof filters) => {
     setFilters(newFilters)
   }
 
-  // Pagination logic
   const totalPages = Math.ceil(filteredCases.length / casesPerPage)
   const startIndex = (currentPage - 1) * casesPerPage
   const endIndex = startIndex + casesPerPage
@@ -307,7 +313,6 @@ export default function CasosPage() {
             ))}
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2">
               <Button

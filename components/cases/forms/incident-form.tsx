@@ -4,23 +4,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { useArgentinaGeo } from "@/hooks/use-argentina-geo"
-import { Loader2, Plus, Trash2 } from "lucide-react"
-
-interface InstanciaJudicial {
-  id?: string
-  numeroCausa: string
-  fiscalFiscalia: string
-  caratula: string
-  ordenNivel: string
-}
+import { Loader2 } from "lucide-react"
 
 interface IncidentFormProps {
   data: {
-    fechaHecho?: string
-    fechaFallecimiento?: string
     provincia?: string
     municipio?: string
     localidadBarrio?: string
@@ -29,9 +17,9 @@ interface IncidentFormProps {
     resumenHecho?: string
     tipoCrimen?: string
     tipoArma?: string
-    instanciasJudiciales?: InstanciaJudicial[]
   }
   onChange: (data: any) => void
+  hideDates?: boolean
 }
 
 const crimeTypes = ["Homicidio", "Femicidio", "Muerte dudosa"]
@@ -66,9 +54,7 @@ const locationTypes = [
   "Otro",
 ]
 
-const judicialLevels = ["Primera Instancia", "Cámara de Apelaciones", "Tribunal Superior / Casación", "Corte Suprema"]
-
-export function IncidentForm({ data, onChange }: IncidentFormProps) {
+export function IncidentForm({ data, onChange, hideDates = false }: IncidentFormProps) {
   const { provincias, municipios, loadingProvincias, loadingMunicipios, errorProvincias } = useArgentinaGeo(
     data.provincia,
   )
@@ -88,33 +74,8 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
     })
   }
 
-  const instancias = data.instanciasJudiciales || []
-
-  const addInstanciaJudicial = () => {
-    onChange({
-      ...data,
-      instanciasJudiciales: [...instancias, { numeroCausa: "", fiscalFiscalia: "", caratula: "", ordenNivel: "" }],
-    })
-  }
-
-  const updateInstanciaJudicial = (index: number, field: string, value: string) => {
-    const updated = [...instancias]
-    updated[index] = { ...updated[index], [field]: value }
-    onChange({
-      ...data,
-      instanciasJudiciales: updated,
-    })
-  }
-
-  const removeInstanciaJudicial = (index: number) => {
-    onChange({
-      ...data,
-      instanciasJudiciales: instancias.filter((_, i) => i !== index),
-    })
-  }
-
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6 max-w-4xl mx-auto">
       <div>
         <h3 className="text-lg font-semibold text-slate-900 font-heading mb-4">Clasificación del Hecho</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -153,36 +114,38 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
       </div>
 
       {/* Fechas */}
-      <div>
-        <h3 className="text-lg font-semibold text-slate-900 font-heading mb-4">Fechas</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="incidentDate" className="text-sm font-medium text-slate-700">
-              Fecha del Hecho
-            </Label>
-            <Input
-              id="incidentDate"
-              type="date"
-              value={data.fechaHecho || ""}
-              onChange={(e) => handleChange("fechaHecho", e.target.value)}
-              className="border-slate-300"
-            />
-          </div>
+      {!hideDates && (
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900 font-heading mb-4">Fechas</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="incidentDate" className="text-sm font-medium text-slate-700">
+                Fecha del Hecho
+              </Label>
+              <Input
+                id="incidentDate"
+                type="date"
+                value={data.fechaHecho || ""}
+                onChange={(e) => handleChange("fechaHecho", e.target.value)}
+                className="border-slate-300"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="deathDate" className="text-sm font-medium text-slate-700">
-              Fecha de Fallecimiento
-            </Label>
-            <Input
-              id="deathDate"
-              type="date"
-              value={data.fechaFallecimiento || ""}
-              onChange={(e) => handleChange("fechaFallecimiento", e.target.value)}
-              className="border-slate-300"
-            />
+            <div className="space-y-2">
+              <Label htmlFor="deathDate" className="text-sm font-medium text-slate-700">
+                Fecha de Fallecimiento
+              </Label>
+              <Input
+                id="deathDate"
+                type="date"
+                value={data.fechaFallecimiento || ""}
+                onChange={(e) => handleChange("fechaFallecimiento", e.target.value)}
+                className="border-slate-300"
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div>
         <h3 className="text-lg font-semibold text-slate-900 font-heading mb-4">Ubicación del Hecho</h3>
@@ -291,7 +254,6 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
         </div>
       </div>
 
-      {/* Resumen */}
       <div className="space-y-2">
         <Label htmlFor="incidentSummary" className="text-sm font-medium text-slate-700">
           Resumen del Hecho
@@ -306,96 +268,7 @@ export function IncidentForm({ data, onChange }: IncidentFormProps) {
         />
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-slate-900 font-heading">Instancias Judiciales</h3>
-          <Button type="button" variant="outline" size="sm" onClick={addInstanciaJudicial}>
-            <Plus className="h-4 w-4 mr-2" />
-            Agregar Instancia
-          </Button>
-        </div>
-
-        {instancias.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic">
-            No hay instancias judiciales registradas. Haga clic en "Agregar Instancia" para añadir una.
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {instancias.map((instancia, index) => (
-              <Card key={index} className="border-slate-200">
-                <CardContent className="pt-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <h4 className="text-sm font-medium text-slate-700">
-                      Instancia {index + 1}
-                      {instancia.ordenNivel && ` - ${instancia.ordenNivel}`}
-                    </h4>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeInstanciaJudicial(index)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 -mt-1"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">Nivel / Orden</Label>
-                      <Select
-                        value={instancia.ordenNivel || ""}
-                        onValueChange={(value) => updateInstanciaJudicial(index, "ordenNivel", value)}
-                      >
-                        <SelectTrigger className="border-slate-300">
-                          <SelectValue placeholder="Seleccionar nivel" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {judicialLevels.map((level) => (
-                            <SelectItem key={level} value={level}>
-                              {level}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">Número de Causa</Label>
-                      <Input
-                        placeholder="IPP N° o número de causa"
-                        value={instancia.numeroCausa || ""}
-                        onChange={(e) => updateInstanciaJudicial(index, "numeroCausa", e.target.value)}
-                        className="border-slate-300"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">Carátula</Label>
-                      <Input
-                        placeholder="Carátula de la causa"
-                        value={instancia.caratula || ""}
-                        onChange={(e) => updateInstanciaJudicial(index, "caratula", e.target.value)}
-                        className="border-slate-300"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">Fiscal / Fiscalía</Label>
-                      <Input
-                        placeholder="Nombre del fiscal o fiscalía"
-                        value={instancia.fiscalFiscalia || ""}
-                        onChange={(e) => updateInstanciaJudicial(index, "fiscalFiscalia", e.target.value)}
-                        className="border-slate-300"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Instancias Judiciales */}
     </div>
   )
 }
