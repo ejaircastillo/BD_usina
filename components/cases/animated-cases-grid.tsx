@@ -137,49 +137,50 @@ export function AnimatedCasesGrid() {
       setIsLoading(true)
       setError(null)
 
-      const { data: casosData, error: casosError } = await supabase
-        .from("casos")
+      const { data: hechosData, error: hechosError } = await supabase
+        .from("hechos")
         .select(`
           id,
-          estado_general,
+          fecha_hecho,
+          municipio,
+          provincia,
+          victima_id,
           victimas (
             id,
             nombre_completo
-          ),
-          hechos (
-            id,
-            fecha_hecho,
-            municipio,
-            provincia
           )
         `)
         .order("created_at", { ascending: false })
         .limit(12)
 
-      if (casosError) throw casosError
+      if (hechosError) throw hechosError
 
       const transformedCases: CaseData[] = await Promise.all(
-        (casosData || []).map(async (caso: any) => {
-          const victima = caso.victimas || {}
-          const hecho = caso.hechos || {}
+        (hechosData || []).map(async (hecho: any) => {
+          const victima = hecho.victimas || {}
 
-          let followUp: any = {}
-          if (hecho.id) {
-            const { data: seguimientoData } = await supabase
-              .from("seguimiento")
-              .select("contacto_familia, parentesco_contacto")
-              .eq("hecho_id", hecho.id)
-              .limit(1)
-            followUp = seguimientoData?.[0] || {}
-          }
+          const { data: casoData } = await supabase
+            .from("casos")
+            .select("id, estado_general")
+            .eq("hecho_id", hecho.id)
+            .limit(1)
+
+          const caso = casoData?.[0]
+
+          const { data: seguimientoData } = await supabase
+            .from("seguimiento")
+            .select("contacto_familia, parentesco_contacto")
+            .eq("hecho_id", hecho.id)
+            .limit(1)
+          const followUp = seguimientoData?.[0] || {}
 
           return {
-            id: caso.id,
+            id: caso?.id || victima.id || hecho.id,
             victimName: victima.nombre_completo || "Sin nombre",
             incidentDate: hecho.fecha_hecho || new Date().toISOString(),
             location: hecho.municipio || hecho.provincia || "No especificado",
             province: hecho.provincia || "No especificado",
-            status: caso.estado_general || "En investigación",
+            status: caso?.estado_general || "En investigación",
             familyContactName: followUp.contacto_familia || "No especificado",
             familyRelationship: followUp.parentesco_contacto || "Familiar",
           }

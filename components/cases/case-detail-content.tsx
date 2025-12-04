@@ -208,21 +208,34 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
       setIsLoading(true)
       setError(null)
 
-      // First get the caso to find the victima_id and hecho_id
-      const { data: casosArray, error: casoError } = await supabase
+      // Strategy 1: Find by caso.id (new structure)
+      const { data: casosArray } = await supabase
         .from("casos")
         .select("id, victima_id, hecho_id, estado_general")
         .eq("id", caseId)
 
-      if (casoError) throw casoError
-
-      // Manual verification - extract first element safely
-      if (!casosArray || casosArray.length === 0) {
-        setError("Caso no encontrado")
+      if (casosArray && casosArray.length > 0) {
+        await loadCaseWithData(casosArray[0])
         return
       }
-      const casoData = casosArray[0]
-      await loadCaseWithData(casoData)
+
+      // Strategy 2: Find by victima.id (legacy cases)
+      const { data: victimasArray } = await supabase.from("victimas").select("*").eq("id", caseId)
+
+      if (victimasArray && victimasArray.length > 0) {
+        await loadLegacyCase(victimasArray[0])
+        return
+      }
+
+      // Strategy 3: Find by hecho.id
+      const { data: hechosArray } = await supabase.from("hechos").select("*, victimas(*)").eq("id", caseId)
+
+      if (hechosArray && hechosArray.length > 0) {
+        await loadLegacyCaseFromHecho(hechosArray[0])
+        return
+      }
+
+      setError("Caso no encontrado")
     } catch (err: any) {
       console.error("Error fetching case data:", err.message)
       setError(err.message)
@@ -231,13 +244,55 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
     }
   }
 
-  const loadCaseWithData = async (casoData: any) => {
-    const { data: victimasArray, error: victimaError } = await supabase
-      .from("victimas")
-      .select("*")
-      .eq("id", casoData.victima_id)
+  const loadLegacyCase = async (victimaData: any) => {
+    // Find the hecho linked to this victima
+    const { data: hechosArray } = await supabase.from("hechos").select("*").eq("victima_id", victimaData.id)
 
-    if (victimaError) throw victimaError
+    const hechoData = hechosArray?.[0] || null
+
+    // Check if there's a caso record
+    let casoId = victimaData.id // Use victima.id as fallback
+    let estadoGeneral = "En investigación"
+
+    if (hechoData) {
+      const { data: casosArray } = await supabase
+        .from("casos")
+        .select("id, estado_general")
+        .eq("hecho_id", hechoData.id)
+        .limit(1)
+
+      if (casosArray && casosArray.length > 0) {
+        casoId = casosArray[0].id
+        estadoGeneral = casosArray[0].estado_general || estadoGeneral
+      }
+    }
+
+    await loadFullCaseData(casoId, victimaData, hechoData, estadoGeneral)
+  }
+
+  const loadLegacyCaseFromHecho = async (hechoData: any) => {
+    const victimaData = hechoData.victimas || null
+
+    // Check if there's a caso record
+    let casoId = victimaData?.id || hechoData.id
+    let estadoGeneral = "En investigación"
+
+    const { data: casosArray } = await supabase
+      .from("casos")
+      .select("id, estado_general")
+      .eq("hecho_id", hechoData.id)
+      .limit(1)
+
+    if (casosArray && casosArray.length > 0) {
+      casoId = casosArray[0].id
+      estadoGeneral = casosArray[0].estado_general || estadoGeneral
+    }
+
+    await loadFullCaseData(casoId, victimaData, hechoData, estadoGeneral)
+  }
+
+  const loadCaseWithData = async (casoData: any) => {
+    const { data: victimasArray } = await supabase.from("victimas").select("*").eq("id", casoData.victima_id)
 
     if (!victimasArray || victimasArray.length === 0) {
       setError("Víctima no encontrada")
@@ -247,81 +302,80 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
 
     let hechoData = null
     if (casoData.hecho_id) {
-      const { data: hechosArray, error } = await supabase.from("hechos").select("*").eq("id", casoData.hecho_id)
-
-      if (!error && hechosArray && hechosArray.length > 0) {
-        hechoData = hechosArray[0]
-      }
+      const { data: hechosArray } = await supabase.from("hechos").select("*").eq("id", casoData.hecho_id)
+      hechoData = hechosArray?.[0] || null
     }
 
-    // Fetch imputados with instancias judiciales
+    await loadFullCaseData(casoData.id, victimaData, hechoData, casoData.estado_general)
+  }
+
+  const loadFullCaseData = async (casoId: string, victimaData: any, hechoData: any, estadoGeneral: string | null) => {
+    // Get imputados
     let imputadosData: Imputado[] = []
-    if (casoData.hecho_id) {
-      const { data: rawImputados, error: impError } = await supabase
-        .from("imputados")
-        .select("*")
-        .eq("hecho_id", casoData.hecho_id)
+    if (hechoData?.id) {
+      const { data: imputadosArray } = await supabase.from("imputados").select("*").eq("hecho_id", hechoData.id)
 
-      if (!impError && rawImputados) {
-        // Fetch instancias for each imputado
-        const imputadosWithInstancias = await Promise.all(
-          rawImputados.map(async (imp) => {
-            const { data: instancias } = await supabase
-              .from("instancias_judiciales")
-              .select("*")
-              .eq("imputado_id", imp.id)
-            return { ...imp, instancias_judiciales: instancias || [] }
-          }),
-        )
-        imputadosData = imputadosWithInstancias
-      }
+      imputadosData = await Promise.all(
+        (imputadosArray || []).map(async (imp: any) => {
+          const { data: instanciasArray } = await supabase
+            .from("instancias_judiciales")
+            .select("*")
+            .eq("imputado_id", imp.id)
+
+          return {
+            ...imp,
+            instancias_judiciales: instanciasArray || [],
+          }
+        }),
+      )
     }
 
-    let seguimientoData = null
-    if (casoData.hecho_id) {
-      const { data: seguimientoArray, error } = await supabase
-        .from("seguimiento")
-        .select("*")
-        .eq("hecho_id", casoData.hecho_id)
-
-      if (!error && seguimientoArray && seguimientoArray.length > 0) {
-        seguimientoData = seguimientoArray[0]
-      }
+    // Get seguimiento
+    let seguimientoData: Seguimiento | null = null
+    if (hechoData?.id) {
+      const { data: seguimientoArray } = await supabase.from("seguimiento").select("*").eq("hecho_id", hechoData.id)
+      seguimientoData = seguimientoArray?.[0] || null
     }
 
-    // Fetch recursos (from victima, hecho, and imputados)
-    const { data: recursosData } = await supabase
-      .from("recursos")
-      .select("*")
-      .or(`victima_id.eq.${casoData.victima_id},hecho_id.eq.${casoData.hecho_id}`)
+    // Get recursos
+    let recursosData: Recurso[] = []
+    if (hechoData?.id) {
+      const { data: recursosArray } = await supabase.from("recursos").select("*").eq("hecho_id", hechoData.id)
+      recursosData = recursosArray || []
+    }
 
-    // Fetch "Hermanos de Hecho" - other victims of the same incident
+    // Get victim-specific recursos
+    if (victimaData?.id) {
+      const { data: victimRecursosArray } = await supabase.from("recursos").select("*").eq("victima_id", victimaData.id)
+      recursosData = [...recursosData, ...(victimRecursosArray || [])]
+    }
+
+    // Get hermanos de hecho (other victims of the same incident)
     let hermanosHecho: HermanoHecho[] = []
-    if (casoData.hecho_id) {
-      const { data: otrosCasos } = await supabase
+    if (hechoData?.id) {
+      const { data: otrosCasosArray } = await supabase
         .from("casos")
         .select("id, victima_id, victimas(nombre_completo)")
-        .eq("hecho_id", casoData.hecho_id)
-        .neq("id", caseId)
+        .eq("hecho_id", hechoData.id)
+        .neq("victima_id", victimaData?.id)
 
-      if (otrosCasos) {
-        hermanosHecho = otrosCasos.map((c: any) => ({
+      hermanosHecho =
+        (otrosCasosArray || []).map((c: any) => ({
           caso_id: c.id,
           victima_id: c.victima_id,
-          victima_nombre: c.victimas?.nombre_completo || null,
-        }))
-      }
+          victima_nombre: c.victimas?.nombre_completo || "Sin nombre",
+        })) || []
     }
 
     setCaseData({
-      caso_id: casoData.id,
-      victima: victimaData,
+      caso_id: casoId,
+      victima: victimaData || {},
       hecho: hechoData,
       imputados: imputadosData,
       seguimiento: seguimientoData,
-      recursos: recursosData || [],
+      recursos: recursosData,
       hermanos_hecho: hermanosHecho,
-      estado_general: casoData.estado_general,
+      estado_general: estadoGeneral,
     })
   }
 

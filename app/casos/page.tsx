@@ -124,49 +124,49 @@ export default function CasosPage() {
       setIsLoading(true)
       setError(null)
 
-      const { data: casosData, error: casosError } = await supabase
-        .from("casos")
+      const { data: hechosData, error: hechosError } = await supabase
+        .from("hechos")
         .select(`
           id,
-          estado_general,
+          fecha_hecho,
+          municipio,
+          provincia,
+          victima_id,
           victimas (
             id,
             nombre_completo
-          ),
-          hechos (
-            id,
-            fecha_hecho,
-            municipio,
-            provincia
           )
         `)
         .order("created_at", { ascending: false })
 
-      if (casosError) throw casosError
+      if (hechosError) throw hechosError
 
-      // Fetch seguimiento data separately for each hecho
       const transformedCases: CaseData[] = await Promise.all(
-        (casosData || []).map(async (caso: any) => {
-          const victima = caso.victimas || {}
-          const hecho = caso.hechos || {}
+        (hechosData || []).map(async (hecho: any) => {
+          const victima = hecho.victimas || {}
 
-          let followUp: any = {}
-          if (hecho.id) {
-            const { data: seguimientoData } = await supabase
-              .from("seguimiento")
-              .select("contacto_familia, parentesco_contacto, telefono_contacto")
-              .eq("hecho_id", hecho.id)
-              .limit(1)
-            followUp = seguimientoData?.[0] || {}
-          }
+          const { data: casoData } = await supabase
+            .from("casos")
+            .select("id, estado_general")
+            .eq("hecho_id", hecho.id)
+            .limit(1)
+
+          const caso = casoData?.[0]
+
+          const { data: seguimientoData } = await supabase
+            .from("seguimiento")
+            .select("contacto_familia, parentesco_contacto, telefono_contacto")
+            .eq("hecho_id", hecho.id)
+            .limit(1)
+          const followUp = seguimientoData?.[0] || {}
 
           return {
-            id: caso.id, // Using caso.id instead of victima.id
+            id: caso?.id || victima.id || hecho.id,
             victimName: victima.nombre_completo || "Sin nombre",
             incidentDate: hecho.fecha_hecho || new Date().toISOString(),
             location: hecho.municipio || "No especificado",
             province: hecho.provincia || "No especificado",
-            status: caso.estado_general || "En investigación",
+            status: caso?.estado_general || "En investigación",
             familyContactName: followUp.contacto_familia || "No especificado",
             familyRelationship: followUp.parentesco_contacto || "",
             familyContactPhone: followUp.telefono_contacto || "No especificado",
@@ -186,7 +186,6 @@ export default function CasosPage() {
   const applyFilters = () => {
     let filtered = [...cases]
 
-    // Apply search term filter
     if (filters.searchTerm) {
       const searchLower = filters.searchTerm.toLowerCase()
       filtered = filtered.filter(
@@ -197,7 +196,6 @@ export default function CasosPage() {
       )
     }
 
-    // Apply date filters
     if (filters.dateFrom) {
       filtered = filtered.filter((caseData) => caseData.incidentDate >= filters.dateFrom)
     }
@@ -205,31 +203,27 @@ export default function CasosPage() {
       filtered = filtered.filter((caseData) => caseData.incidentDate <= filters.dateTo)
     }
 
-    // Apply province filter
     if (filters.province) {
       filtered = filtered.filter((caseData) => caseData.province === filters.province)
     }
 
-    // Apply location filter
     if (filters.location) {
       const locationLower = filters.location.toLowerCase()
       filtered = filtered.filter((caseData) => caseData.location.toLowerCase().includes(locationLower))
     }
 
-    // Apply status filter
     if (filters.status) {
       filtered = filtered.filter((caseData) => caseData.status === filters.status)
     }
 
     setFilteredCases(filtered)
-    setCurrentPage(1) // Reset to first page when filters change
+    setCurrentPage(1)
   }
 
   const handleFiltersChange = (newFilters: typeof filters) => {
     setFilters(newFilters)
   }
 
-  // Pagination logic
   const totalPages = Math.ceil(filteredCases.length / casesPerPage)
   const startIndex = (currentPage - 1) * casesPerPage
   const endIndex = startIndex + casesPerPage
@@ -319,7 +313,6 @@ export default function CasosPage() {
             ))}
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2">
               <Button
