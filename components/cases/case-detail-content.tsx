@@ -209,28 +209,40 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
       setError(null)
 
       // First get the caso to find the victima_id and hecho_id
-      const { data: casoData, error: casoError } = await supabase
+      const { data: casosArray, error: casoError } = await supabase
         .from("casos")
         .select("id, victima_id, hecho_id, estado_general")
         .eq("id", caseId)
-        .single()
 
       if (casoError) throw casoError
 
-      // Fetch victima
-      const { data: victimaData, error: victimaError } = await supabase
+      // Manual verification - extract first element safely
+      if (!casosArray || casosArray.length === 0) {
+        setError("Caso no encontrado")
+        return
+      }
+      const casoData = casosArray[0]
+
+      const { data: victimasArray, error: victimaError } = await supabase
         .from("victimas")
         .select("*")
         .eq("id", casoData.victima_id)
-        .single()
 
       if (victimaError) throw victimaError
 
-      // Fetch hecho
+      if (!victimasArray || victimasArray.length === 0) {
+        setError("Víctima no encontrada")
+        return
+      }
+      const victimaData = victimasArray[0]
+
       let hechoData = null
       if (casoData.hecho_id) {
-        const { data, error } = await supabase.from("hechos").select("*").eq("id", casoData.hecho_id).maybeSingle() // Use maybeSingle to avoid error when no record exists
-        if (!error) hechoData = data
+        const { data: hechosArray, error } = await supabase.from("hechos").select("*").eq("id", casoData.hecho_id)
+
+        if (!error && hechosArray && hechosArray.length > 0) {
+          hechoData = hechosArray[0]
+        }
       }
 
       // Fetch imputados with instancias judiciales
@@ -258,12 +270,14 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
 
       let seguimientoData = null
       if (casoData.hecho_id) {
-        const { data, error } = await supabase
+        const { data: seguimientoArray, error } = await supabase
           .from("seguimiento")
           .select("*")
           .eq("hecho_id", casoData.hecho_id)
-          .maybeSingle() // Use maybeSingle instead of single to avoid "multiple rows" error
-        if (!error) seguimientoData = data
+
+        if (!error && seguimientoArray && seguimientoArray.length > 0) {
+          seguimientoData = seguimientoArray[0]
+        }
       }
 
       // Fetch recursos (from victima, hecho, and imputados)
