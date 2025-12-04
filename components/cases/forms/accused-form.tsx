@@ -22,6 +22,8 @@ const ESTADO_PROCESAL_OPTIONS = [
   { value: "menor_inimputable", label: "Menor inimputable con medida de seguridad" },
 ]
 
+const judicialLevels = ["Primera Instancia", "Cámara de Apelaciones", "Tribunal Superior / Casación", "Corte Suprema"]
+
 interface AccusedFormProps {
   data: any[]
   onChange: (data: any[]) => void
@@ -54,6 +56,7 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
       esReincidente: false,
       cargos: "",
       resources: [],
+      instanciasJudiciales: [],
     }
     onChange([...data, newAccused])
   }
@@ -93,6 +96,39 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
 
   const updateResources = (accusedId: number, resources: any[]) => {
     updateAccused(accusedId, "resources", resources)
+  }
+
+  const addInstanciaJudicial = (accusedId: number) => {
+    const accused = data.find((a) => a.id === accusedId)
+    if (accused) {
+      const updatedInstancias = [
+        ...(accused.instanciasJudiciales || []),
+        {
+          numeroCausa: "",
+          fiscalFiscalia: "",
+          caratula: "",
+          ordenNivel: "",
+        },
+      ]
+      updateAccused(accusedId, "instanciasJudiciales", updatedInstancias)
+    }
+  }
+
+  const updateInstanciaJudicial = (accusedId: number, index: number, field: string, value: string) => {
+    const accused = data.find((a) => a.id === accusedId)
+    if (accused) {
+      const updatedInstancias = [...(accused.instanciasJudiciales || [])]
+      updatedInstancias[index] = { ...updatedInstancias[index], [field]: value }
+      updateAccused(accusedId, "instanciasJudiciales", updatedInstancias)
+    }
+  }
+
+  const removeInstanciaJudicial = (accusedId: number, index: number) => {
+    const accused = data.find((a) => a.id === accusedId)
+    if (accused) {
+      const updatedInstancias = (accused.instanciasJudiciales || []).filter((_: any, i: number) => i !== index)
+      updateAccused(accusedId, "instanciasJudiciales", updatedInstancias)
+    }
   }
 
   return (
@@ -142,6 +178,7 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* ... existing accused fields ... */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-slate-700">Apellido y Nombre</Label>
                     <Input
@@ -269,6 +306,7 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                   </div>
                 </div>
 
+                {/* Fechas del Juicio */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <Label className="text-sm font-medium text-slate-700">Fechas del Juicio</Label>
@@ -311,6 +349,7 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                   )}
                 </div>
 
+                {/* Opciones Adicionales */}
                 <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                   <Label className="text-sm font-medium text-slate-700 mb-3 block">Opciones Adicionales</Label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -393,6 +432,7 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                   </div>
                 </div>
 
+                {/* Cargos */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-slate-700">Cargos/Delitos</Label>
                   <Textarea
@@ -404,7 +444,110 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                   />
                 </div>
 
-                <div className="border-t pt-4 mt-6">
+                <div className="border-t pt-4 mt-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-md font-semibold text-slate-900 font-heading">Instancias Judiciales</h4>
+                      <p className="text-xs text-slate-500">Causas y fiscalías relacionadas con este imputado.</p>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={() => addInstanciaJudicial(accused.id)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Agregar Instancia
+                    </Button>
+                  </div>
+
+                  {!accused.instanciasJudiciales || accused.instanciasJudiciales.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic text-center py-4 border border-dashed border-slate-300 rounded">
+                      No hay instancias judiciales registradas.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {accused.instanciasJudiciales.map((instancia: any, instIndex: number) => (
+                        <Card key={instIndex} className="border-slate-200 bg-slate-50">
+                          <CardContent className="pt-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <h5 className="text-sm font-medium text-slate-700">
+                                Instancia {instIndex + 1}
+                                {instancia.ordenNivel && ` - ${instancia.ordenNivel}`}
+                              </h5>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeInstanciaJudicial(accused.id, instIndex)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 -mt-1 h-8 w-8 p-0"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium text-slate-600">Nivel / Orden</Label>
+                                <Select
+                                  value={instancia.ordenNivel || ""}
+                                  onValueChange={(value) =>
+                                    updateInstanciaJudicial(accused.id, instIndex, "ordenNivel", value)
+                                  }
+                                >
+                                  <SelectTrigger className="border-slate-300 h-9">
+                                    <SelectValue placeholder="Seleccionar nivel" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {judicialLevels.map((level) => (
+                                      <SelectItem key={level} value={level}>
+                                        {level}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium text-slate-600">Número de Causa</Label>
+                                <Input
+                                  placeholder="IPP N° o número de causa"
+                                  value={instancia.numeroCausa || ""}
+                                  onChange={(e) =>
+                                    updateInstanciaJudicial(accused.id, instIndex, "numeroCausa", e.target.value)
+                                  }
+                                  className="border-slate-300 h-9"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium text-slate-600">Carátula</Label>
+                                <Input
+                                  placeholder="Carátula de la causa"
+                                  value={instancia.caratula || ""}
+                                  onChange={(e) =>
+                                    updateInstanciaJudicial(accused.id, instIndex, "caratula", e.target.value)
+                                  }
+                                  className="border-slate-300 h-9"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium text-slate-600">Fiscal / Fiscalía</Label>
+                                <Input
+                                  placeholder="Nombre del fiscal o fiscalía"
+                                  value={instancia.fiscalFiscalia || ""}
+                                  onChange={(e) =>
+                                    updateInstanciaJudicial(accused.id, instIndex, "fiscalFiscalia", e.target.value)
+                                  }
+                                  className="border-slate-300 h-9"
+                                />
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Recursos del Imputado */}
+                <div className="border-t pt-4 mt-4">
                   <h4 className="text-md font-semibold text-slate-900 font-heading mb-2">Recursos del Imputado</h4>
                   <p className="text-xs text-slate-500 mb-4">
                     Fotos, documentos, noticias y enlaces relacionados con este imputado.

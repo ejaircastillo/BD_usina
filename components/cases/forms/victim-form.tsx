@@ -11,9 +11,10 @@ import { Loader2 } from "lucide-react"
 interface VictimFormProps {
   data: any
   onChange: (data: any) => void
+  showDates?: boolean
 }
 
-export function VictimForm({ data, onChange }: VictimFormProps) {
+export function VictimForm({ data, onChange, showDates = false }: VictimFormProps) {
   const { countries, isLoading: isLoadingCountries } = useCountries()
   const { provincias, municipios, isLoadingProvincias, isLoadingMunicipios, fetchMunicipios } = useArgentinaGeo()
 
@@ -24,12 +25,11 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
     })
   }
 
-  // Handle provincia change - clear municipio and fetch new list
   const handleProvinciaResidenciaChange = (provincia: string) => {
     onChange({
       ...data,
       provinciaResidencia: provincia,
-      municipioResidencia: "", // Clear municipio when provincia changes
+      municipioResidencia: "",
     })
     if (provincia) {
       fetchMunicipios(provincia)
@@ -37,7 +37,40 @@ export function VictimForm({ data, onChange }: VictimFormProps) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6">
+      {showDates && (
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900 font-heading mb-4">Fechas del Caso</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="fechaHecho" className="text-sm font-medium text-slate-700">
+                Fecha del Hecho
+              </Label>
+              <Input
+                id="fechaHecho"
+                type="date"
+                value={data.fechaHecho || ""}
+                onChange={(e) => handleChange("fechaHecho", e.target.value)}
+                className="border-slate-300"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fechaFallecimiento" className="text-sm font-medium text-slate-700">
+                Fecha de Fallecimiento
+              </Label>
+              <Input
+                id="fechaFallecimiento"
+                type="date"
+                value={data.fechaFallecimiento || ""}
+                onChange={(e) => handleChange("fechaFallecimiento", e.target.value)}
+                className="border-slate-300"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div>
         <h3 className="text-lg font-semibold text-slate-900 font-heading mb-4">Datos Personales de la Víctima</h3>
 

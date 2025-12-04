@@ -69,7 +69,8 @@ function CaseCard({ case: caseData }: CaseCardProps) {
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-blue-600" />
                 <span className="line-clamp-1">
-                  {caseData.familyContactName} - {caseData.familyRelationship}
+                  {caseData.familyContactName}
+                  {caseData.familyRelationship && ` - ${caseData.familyRelationship}`}
                 </span>
               </div>
             </div>
@@ -90,7 +91,6 @@ function ScrollingRow({ cases, direction, speed }: ScrollingRowProps) {
   const [duplicatedCases, setDuplicatedCases] = useState<CaseData[]>([])
 
   useEffect(() => {
-    // Duplicate cases to create seamless loop
     setDuplicatedCases([...cases, ...cases, ...cases])
   }, [cases])
 
@@ -123,7 +123,6 @@ export function AnimatedCasesGrid() {
 
   useEffect(() => {
     if (cases.length > 0) {
-      // Split cases into multiple rows
       const chunkSize = 4
       const caseRows = []
       for (let i = 0; i < cases.length; i += chunkSize) {
@@ -138,44 +137,41 @@ export function AnimatedCasesGrid() {
       setIsLoading(true)
       setError(null)
 
-      // Query from hechos table which has the relationships
-      const { data: hechosData, error: hechosError } = await supabase
-        .from("hechos")
+      const { data: victimData, error: victimError } = await supabase
+        .from("victimas")
         .select(`
           id,
-          fecha_hecho,
-          municipio,
-          provincia,
-          victima_id,
-          victimas!inner (
+          nombre_completo,
+          hechos (
             id,
-            nombre_completo
-          ),
-          seguimiento (
-            contacto_familia,
-            parentesco_contacto
-          ),
-          imputados (
-            estado_procesal
+            fecha_hecho,
+            municipio,
+            provincia,
+            seguimiento (
+              contacto_familia,
+              parentesco_contacto
+            ),
+            imputados (
+              estado_procesal
+            )
           )
         `)
         .order("created_at", { ascending: false })
         .limit(12)
 
-      if (hechosError) throw hechosError
+      if (victimError) throw victimError
 
-      // Transform data to match component interface
-      const transformedCases: CaseData[] = (hechosData || []).map((hecho: any) => {
-        const victim = hecho.victimas || {}
-        const followUp = hecho.seguimiento?.[0] || {}
-        const imputado = hecho.imputados?.[0] || {}
+      const transformedCases: CaseData[] = (victimData || []).map((victim: any) => {
+        const incident = victim.hechos?.[0] || {}
+        const followUp = incident.seguimiento?.[0] || {}
+        const imputado = incident.imputados?.[0] || {}
 
         return {
-          id: victim.id || hecho.victima_id,
+          id: victim.id,
           victimName: victim.nombre_completo || "Sin nombre",
-          incidentDate: hecho.fecha_hecho || new Date().toISOString(),
-          location: hecho.municipio || "No especificado",
-          province: hecho.provincia || "No especificado",
+          incidentDate: incident.fecha_hecho || new Date().toISOString(),
+          location: incident.municipio || incident.provincia || "No especificado",
+          province: incident.provincia || "No especificado",
           status: imputado.estado_procesal || "En investigación",
           familyContactName: followUp.contacto_familia || "No especificado",
           familyRelationship: followUp.parentesco_contacto || "Familiar",
@@ -183,8 +179,8 @@ export function AnimatedCasesGrid() {
       })
 
       setCases(transformedCases)
-    } catch (err: any) {
-      console.error("Error fetching cases:", err?.message || err)
+    } catch (err) {
+      console.error("Error fetching cases:", err)
       setError("Error al cargar los casos")
     } finally {
       setIsLoading(false)
