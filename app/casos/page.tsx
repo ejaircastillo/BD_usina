@@ -124,45 +124,55 @@ export default function CasosPage() {
       setIsLoading(true)
       setError(null)
 
-      const { data: victimData, error: victimError } = await supabase.from("victimas").select(`
+      const { data: casosData, error: casosError } = await supabase
+        .from("casos")
+        .select(`
           id,
-          nombre_completo,
+          estado_general,
+          victimas (
+            id,
+            nombre_completo
+          ),
           hechos (
             id,
             fecha_hecho,
             municipio,
-            provincia,
-            seguimiento (
-              contacto_familia,
-              parentesco_contacto,
-              telefono_contacto
-            ),
-            imputados (
-              estado_procesal
-            )
+            provincia
           )
         `)
+        .order("created_at", { ascending: false })
 
-      if (victimError) throw victimError
+      if (casosError) throw casosError
 
-      // Transform data to match component interface
-      const transformedCases: CaseData[] = (victimData || []).map((victim: any) => {
-        const incident = victim.hechos?.[0] || {}
-        const followUp = incident.seguimiento?.[0] || {}
-        const imputado = incident.imputados?.[0] || {}
+      // Fetch seguimiento data separately for each hecho
+      const transformedCases: CaseData[] = await Promise.all(
+        (casosData || []).map(async (caso: any) => {
+          const victima = caso.victimas || {}
+          const hecho = caso.hechos || {}
 
-        return {
-          id: victim.id,
-          victimName: victim.nombre_completo || "Sin nombre",
-          incidentDate: incident.fecha_hecho || new Date().toISOString(),
-          location: incident.municipio || "No especificado",
-          province: incident.provincia || "No especificado",
-          status: imputado.estado_procesal || "En investigación",
-          familyContactName: followUp.contacto_familia || "No especificado",
-          familyRelationship: followUp.parentesco_contacto || "",
-          familyContactPhone: followUp.telefono_contacto || "No especificado",
-        }
-      })
+          let followUp: any = {}
+          if (hecho.id) {
+            const { data: seguimientoData } = await supabase
+              .from("seguimiento")
+              .select("contacto_familia, parentesco_contacto, telefono_contacto")
+              .eq("hecho_id", hecho.id)
+              .limit(1)
+            followUp = seguimientoData?.[0] || {}
+          }
+
+          return {
+            id: caso.id, // Using caso.id instead of victima.id
+            victimName: victima.nombre_completo || "Sin nombre",
+            incidentDate: hecho.fecha_hecho || new Date().toISOString(),
+            location: hecho.municipio || "No especificado",
+            province: hecho.provincia || "No especificado",
+            status: caso.estado_general || "En investigación",
+            familyContactName: followUp.contacto_familia || "No especificado",
+            familyRelationship: followUp.parentesco_contacto || "",
+            familyContactPhone: followUp.telefono_contacto || "No especificado",
+          }
+        }),
+      )
 
       setCases(transformedCases)
     } catch (err) {
