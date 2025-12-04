@@ -3,37 +3,22 @@
 import type React from "react"
 
 import { useEffect, useState, useRef } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-
-const DEV_BYPASS_AUTH = true
-
-export const MOCK_USER = {
-  id: "dev-user-123",
-  email: "admin@test.com",
-  user_metadata: {
-    full_name: "Admin de Prueba",
-  },
-  role: "authenticated",
-  created_at: new Date().toISOString(),
-}
+import { Loader2 } from "lucide-react"
 
 interface AuthGuardProps {
   children: React.ReactNode
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(DEV_BYPASS_AUTH ? true : null)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const pathname = usePathname()
+  const router = useRouter()
   const hasRedirectedRef = useRef(false)
   const supabase = createClient()
 
   useEffect(() => {
-    if (DEV_BYPASS_AUTH) {
-      setIsAuthenticated(true)
-      return
-    }
-
     if (hasRedirectedRef.current) return
 
     let isMounted = true
@@ -53,14 +38,14 @@ export function AuthGuard({ children }: AuthGuardProps) {
         // Si no está autenticado y no está en login, redirigir a login
         if (!isAuth && pathname !== "/login") {
           hasRedirectedRef.current = true
-          window.location.href = "/login"
+          router.replace("/login")
           return
         }
 
         // Si está autenticado y está en login, redirigir a la página principal
         if (isAuth && pathname === "/login") {
           hasRedirectedRef.current = true
-          window.location.href = "/"
+          router.replace("/")
           return
         }
       } catch (err) {
@@ -68,7 +53,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
           setIsAuthenticated(false)
           if (pathname !== "/login") {
             hasRedirectedRef.current = true
-            window.location.href = "/login"
+            router.replace("/login")
           }
         }
       }
@@ -84,7 +69,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
       if (event === "SIGNED_OUT" && pathname !== "/login") {
         hasRedirectedRef.current = true
-        window.location.href = "/login"
+        router.replace("/login")
       }
     })
 
@@ -94,18 +79,13 @@ export function AuthGuard({ children }: AuthGuardProps) {
       isMounted = false
       subscription.unsubscribe()
     }
-  }, [supabase, pathname])
+  }, [supabase, pathname, router])
 
-  if (DEV_BYPASS_AUTH) {
-    return <>{children}</>
-  }
-
-  // Mostrar loading mientras verifica autenticación
   if (isAuthenticated === null) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
           <p className="text-slate-600">Verificando acceso...</p>
         </div>
       </div>
@@ -122,6 +102,13 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return <>{children}</>
   }
 
-  // Si no está autenticado, no mostrar nada (la redirección ocurrirá)
-  return null
+  // Si no está autenticado, mostrar loading mientras redirige
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+        <p className="text-slate-600">Redirigiendo al login...</p>
+      </div>
+    </div>
+  )
 }
