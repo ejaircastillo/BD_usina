@@ -229,7 +229,7 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
       // Fetch hecho
       let hechoData = null
       if (casoData.hecho_id) {
-        const { data, error } = await supabase.from("hechos").select("*").eq("id", casoData.hecho_id).single()
+        const { data, error } = await supabase.from("hechos").select("*").eq("id", casoData.hecho_id).maybeSingle() // Use maybeSingle to avoid error when no record exists
         if (!error) hechoData = data
       }
 
@@ -256,14 +256,13 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
         }
       }
 
-      // Fetch seguimiento
       let seguimientoData = null
       if (casoData.hecho_id) {
         const { data, error } = await supabase
           .from("seguimiento")
           .select("*")
           .eq("hecho_id", casoData.hecho_id)
-          .single()
+          .maybeSingle() // Use maybeSingle instead of single to avoid "multiple rows" error
         if (!error) seguimientoData = data
       }
 
@@ -286,7 +285,7 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
           hermanosHecho = otrosCasos.map((c: any) => ({
             caso_id: c.id,
             victima_id: c.victima_id,
-            victima_nombre: c.victimas?.nombre_completo || "Sin nombre",
+            victima_nombre: c.victimas?.nombre_completo || null,
           }))
         }
       }
@@ -301,9 +300,9 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
         hermanos_hecho: hermanosHecho,
         estado_general: casoData.estado_general,
       })
-    } catch (err) {
-      console.error("Error fetching case data:", err)
-      setError("Error al cargar los datos del caso")
+    } catch (err: any) {
+      console.error("Error fetching case data:", err.message)
+      setError(err.message)
     } finally {
       setIsLoading(false)
     }
