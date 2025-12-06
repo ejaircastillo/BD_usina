@@ -101,6 +101,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
       }
 
       const hecho = victimData.hechos[0]
+      const seguimiento = hecho?.seguimiento?.[0] || {}
 
       const imputadosWithResources = await Promise.all(
         (hecho?.imputados || []).map(async (imputado: any) => {
@@ -155,6 +156,10 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         }),
       )
 
+      const listaMiembros = seguimiento.lista_miembros_asignados || []
+      const listaContactos = seguimiento.lista_contactos_familiares || []
+      const listaAbogados = seguimiento.datos_abogados_querellantes || []
+
       setFormData({
         victims: [
           {
@@ -167,8 +172,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             notasAdicionales: victimData.notas_adicionales || "",
             provinciaResidencia: victimData.provincia_residencia || "",
             municipioResidencia: victimData.municipio_residencia || "",
-            fechaHecho: hecho?.fecha_hecho || "",
-            fechaFallecimiento: hecho?.fecha_fallecimiento || "",
+            fechaHecho: victimData.fecha_hecho || "",
+            fechaFallecimiento: victimData.fecha_fallecimiento || "",
             resources: (victimResourcesData || []).map((r: any) => ({
               id: r.id,
               tipo: r.tipo || "",
@@ -196,23 +201,28 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         },
         accused: imputadosWithResources,
         followUp: {
-          miembroAsignado: hecho?.seguimiento?.[0]?.miembro_asignado || "",
-          contactoFamiliar: hecho?.seguimiento?.[0]?.contacto_familia || "",
-          telefonoContacto: hecho?.seguimiento?.[0]?.telefono_contacto || "",
-          tipoAcompanamiento: hecho?.seguimiento?.[0]?.tipo_acompanamiento || [],
-          abogadoQuerellante: hecho?.seguimiento?.[0]?.abogado_querellante || "",
-          amicusCuriae: hecho?.seguimiento?.[0]?.amicus_curiae || false,
-          comoLlegoCaso: hecho?.seguimiento?.[0]?.como_llego_caso || "",
-          primerContacto: hecho?.seguimiento?.[0]?.primer_contacto || false,
-          notasSeguimiento: hecho?.seguimiento?.[0]?.notas_seguimiento || "",
-          emailContacto: hecho?.seguimiento?.[0]?.email_contacto || "",
-          direccionContacto: hecho?.seguimiento?.[0]?.direccion_contacto || "",
-          telefonoMiembro: hecho?.seguimiento?.[0]?.telefono_miembro || "",
-          emailMiembro: hecho?.seguimiento?.[0]?.email_miembro || "",
-          fechaAsignacion: hecho?.seguimiento?.[0]?.fecha_asignacion || "",
-          proximasAcciones: hecho?.seguimiento?.[0]?.proximas_acciones || "",
-          parentescoContacto: hecho?.seguimiento?.[0]?.parentesco_contacto || "",
-          parentescoOtro: "",
+          miembroAsignado: seguimiento.miembro_asignado || "",
+          contactoFamiliar: seguimiento.contacto_familia || "",
+          telefonoContacto: seguimiento.telefono_contacto || "",
+          tipoAcompanamiento: seguimiento.tipo_acompanamiento || [],
+          abogadoQuerellante: seguimiento.abogado_querellante || "",
+          amicusCuriae: seguimiento.amicus_curiae || false,
+          comoLlegoCaso: seguimiento.como_llego_caso || "",
+          primerContacto: seguimiento.primer_contacto || false,
+          notasSeguimiento: seguimiento.notas_seguimiento || "",
+          emailContacto: seguimiento.email_contacto || "",
+          direccionContacto: seguimiento.direccion_contacto || "",
+          telefonoMiembro: seguimiento.telefono_miembro || "",
+          emailMiembro: seguimiento.email_miembro || "",
+          fechaAsignacion: seguimiento.fecha_asignacion || "",
+          proximasAcciones: seguimiento.proximas_acciones || "",
+          parentescoContacto: seguimiento.parentesco_contacto || "",
+          parentescoOtro: seguimiento.parentesco_otro || "",
+          tieneAbogadoQuerellante: seguimiento.tiene_abogado_querellante || "ns_nc",
+          abogadoUsinaAmicus: seguimiento.abogado_usina_amicus || "",
+          listaMiembrosAsignados: Array.isArray(listaMiembros) ? listaMiembros : [],
+          listaContactosFamiliares: Array.isArray(listaContactos) ? listaContactos : [],
+          datosAbogadosQuerellantes: Array.isArray(listaAbogados) ? listaAbogados : [],
         },
         resources: (hecho?.recursos || [])
           .filter((r: any) => !r.imputado_id && !r.victima_id)
@@ -306,6 +316,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             notas_adicionales: victim.notasAdicionales || null,
             provincia_residencia: victim.provinciaResidencia || null,
             municipio_residencia: victim.municipioResidencia || null,
+            fecha_hecho: victim.fechaHecho || null,
+            fecha_fallecimiento: victim.fechaFallecimiento || null,
           })
           .eq("id", caseId)
 
@@ -324,8 +336,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         const { error: incidentError } = await supabase
           .from("hechos")
           .update({
-            fecha_hecho: victim.fechaHecho || null,
-            fecha_fallecimiento: victim.fechaFallecimiento || null,
             provincia: formData.incident.provincia || null,
             municipio: formData.incident.municipio || null,
             localidad_barrio: formData.incident.localidadBarrio || null,
@@ -437,6 +447,11 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               proximas_acciones: formData.followUp.proximasAcciones || null,
               parentesco_contacto: formData.followUp.parentescoContacto || null,
               parentesco_otro: formData.followUp.parentescoOtro || null,
+              tiene_abogado_querellante: formData.followUp.tieneAbogadoQuerellante || "ns_nc",
+              abogado_usina_amicus: formData.followUp.abogadoUsinaAmicus || null,
+              lista_miembros_asignados: formData.followUp.listaMiembrosAsignados || null,
+              lista_contactos_familiares: formData.followUp.listaContactosFamiliares || null,
+              datos_abogados_querellantes: formData.followUp.datosAbogadosQuerellantes || null,
             },
           ])
 
@@ -536,6 +551,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 notas_adicionales: victim.notasAdicionales || null,
                 provincia_residencia: victim.provinciaResidencia || null,
                 municipio_residencia: victim.municipioResidencia || null,
+                fecha_hecho: victim.fechaHecho || null,
+                fecha_fallecimiento: victim.fechaFallecimiento || null,
               },
             ])
             .select()
@@ -564,6 +581,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 await supabase.from("recursos").insert([
                   {
                     victima_id: victimData.id,
+                    hecho_id: hechoId,
                     tipo: resource.tipo || null,
                     titulo: resource.titulo || null,
                     url: resource.url || null,
@@ -670,6 +688,11 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               proximas_acciones: formData.followUp.proximasAcciones || null,
               parentesco_contacto: formData.followUp.parentescoContacto || null,
               parentesco_otro: formData.followUp.parentescoOtro || null,
+              tiene_abogado_querellante: formData.followUp.tieneAbogadoQuerellante || "ns_nc",
+              abogado_usina_amicus: formData.followUp.abogadoUsinaAmicus || null,
+              lista_miembros_asignados: formData.followUp.listaMiembrosAsignados || null,
+              lista_contactos_familiares: formData.followUp.listaContactosFamiliares || null,
+              datos_abogados_querellantes: formData.followUp.datosAbogadosQuerellantes || null,
             },
           ])
 
