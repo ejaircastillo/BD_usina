@@ -84,24 +84,32 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
       let hechoId: string | null = null
       let casoId: string | null = null
 
+      console.log("[v0] Starting loadExistingCaseData with caseId:", caseId)
+
       // Strategy 1: Try to find by caso.id first
-      const { data: casoData } = await supabase
+      const { data: casoData, error: casoError } = await supabase
         .from("casos")
         .select("id, victima_id, hecho_id")
         .eq("id", caseId)
         .maybeSingle()
 
+      console.log("[v0] Strategy 1 (casos) - data:", casoData, "error:", casoError)
+
       if (casoData) {
-        console.log("[v0] Found caso record:", casoData)
         casoId = casoData.id
         victimaId = casoData.victima_id
         hechoId = casoData.hecho_id
       } else {
         // Strategy 2: Try to find by victima.id
-        const { data: victimaCheck } = await supabase.from("victimas").select("id").eq("id", caseId).maybeSingle()
+        const { data: victimaCheck, error: victimaCheckError } = await supabase
+          .from("victimas")
+          .select("id")
+          .eq("id", caseId)
+          .maybeSingle()
+
+        console.log("[v0] Strategy 2 (victimas) - data:", victimaCheck, "error:", victimaCheckError)
 
         if (victimaCheck) {
-          console.log("[v0] Found victima record:", victimaCheck)
           victimaId = victimaCheck.id
 
           // Get the hecho associated with this victima
@@ -116,14 +124,15 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         } else {
           // Strategy 3: Try to find by hecho.id
-          const { data: hechoCheck } = await supabase
+          const { data: hechoCheck, error: hechoCheckError } = await supabase
             .from("hechos")
             .select("id, victima_id")
             .eq("id", caseId)
             .maybeSingle()
 
+          console.log("[v0] Strategy 3 (hechos) - data:", hechoCheck, "error:", hechoCheckError)
+
           if (hechoCheck) {
-            console.log("[v0] Found hecho record:", hechoCheck)
             hechoId = hechoCheck.id
             victimaId = hechoCheck.victima_id
           }
@@ -133,31 +142,82 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
       console.log("[v0] Resolved IDs - victimaId:", victimaId, "hechoId:", hechoId, "casoId:", casoId)
 
       if (!victimaId) {
-        throw new Error("No se pudo encontrar la víctima asociada a este caso")
+        throw new Error("No se pudo encontrar la víctima asociada a este caso. Verifica que el ID sea correcto.")
       }
 
       // Store real IDs for later use in updates
       setRealIds({ victimaId, hechoId, casoId })
 
-      // Now fetch all data using the resolved IDs
       const { data: victimData, error: victimError } = await supabase
         .from("victimas")
-        .select("*")
+        .select(`
+          id,
+          nombre_completo,
+          fecha_nacimiento,
+          edad,
+          profesion,
+          redes_sociales,
+          nacionalidad,
+          notas_adicionales,
+          provincia_residencia,
+          municipio_residencia,
+          fecha_hecho,
+          fecha_fallecimiento
+        `)
         .eq("id", victimaId)
         .single()
 
-      if (victimError) throw victimError
+      console.log("[v0] Victim query - data:", victimData, "error:", victimError)
 
-      console.log("[v0] Victim data loaded:", victimData)
+      if (victimError) {
+        console.error("[v0] Victim fetch error details:", victimError)
+        throw new Error(`Error al cargar víctima: ${victimError.message}`)
+      }
+
+      if (!victimData) {
+        throw new Error("No se encontraron datos de la víctima")
+      }
 
       // Fetch hecho data
       let hechoData = null
       if (hechoId) {
-        const { data } = await supabase.from("hechos").select("*").eq("id", hechoId).single()
+        const { data, error: hechoError } = await supabase
+          .from("hechos")
+          .select(`
+            id,
+            provincia,
+            municipio,
+            localidad_barrio,
+            tipo_lugar,
+            lugar_otro,
+            resumen_hecho,
+            tipo_crimen,
+            tipo_arma
+          `)
+          .eq("id", hechoId)
+          .single()
+
+        console.log("[v0] Hecho query - data:", data, "error:", hechoError)
         hechoData = data
-      } else {
+      } else if (victimaId) {
         // Fallback: find hecho by victima_id
-        const { data } = await supabase.from("hechos").select("*").eq("victima_id", victimaId).maybeSingle()
+        const { data, error: hechoError } = await supabase
+          .from("hechos")
+          .select(`
+            id,
+            provincia,
+            municipio,
+            localidad_barrio,
+            tipo_lugar,
+            lugar_otro,
+            resumen_hecho,
+            tipo_crimen,
+            tipo_arma
+          `)
+          .eq("victima_id", victimaId)
+          .maybeSingle()
+
+        console.log("[v0] Hecho fallback query - data:", data, "error:", hechoError)
         hechoData = data
         if (data) {
           hechoId = data.id
@@ -165,21 +225,50 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         }
       }
 
-      console.log("[v0] Hecho data loaded:", hechoData)
-
       // Fetch seguimiento data
       let seguimientoData = null
       if (hechoId) {
-        const { data } = await supabase.from("seguimiento").select("*").eq("hecho_id", hechoId).maybeSingle()
+        const { data, error: seguimientoError } = await supabase
+          .from("seguimiento")
+          .select(`
+            id,
+            miembro_asignado,
+            contacto_familia,
+            telefono_contacto,
+            tipo_acompanamiento,
+            abogado_querellante,
+            amicus_curiae,
+            como_llego_caso,
+            primer_contacto,
+            notas_seguimiento,
+            email_contacto,
+            direccion_contacto,
+            telefono_miembro,
+            email_miembro,
+            fecha_asignacion,
+            proximas_acciones,
+            parentesco_contacto,
+            parentesco_otro,
+            tiene_abogado_querellante,
+            abogado_usina_amicus,
+            abogado_amicus_firmante,
+            lista_miembros_asignados,
+            lista_contactos_familiares,
+            datos_abogados_querellantes
+          `)
+          .eq("hecho_id", hechoId)
+          .maybeSingle()
+
+        console.log("[v0] Seguimiento query - data:", data, "error:", seguimientoError)
         seguimientoData = data
       }
-
-      console.log("[v0] Seguimiento data loaded:", seguimientoData)
 
       // Fetch imputados with their resources and instancias
       let imputadosData: any[] = []
       if (hechoId) {
-        const { data } = await supabase.from("imputados").select("*").eq("hecho_id", hechoId)
+        const { data, error: imputadosError } = await supabase.from("imputados").select("*").eq("hecho_id", hechoId)
+
+        console.log("[v0] Imputados query - data:", data, "error:", imputadosError)
         imputadosData = data || []
       }
 
