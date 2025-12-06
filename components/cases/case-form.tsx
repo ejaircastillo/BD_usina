@@ -73,28 +73,89 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
       const { data: victimData, error: victimError } = await supabase
         .from("victimas")
         .select(`
-          *,
+          id,
+          nombre_completo,
+          fecha_nacimiento,
+          edad,
+          profesion,
+          redes_sociales,
+          nacionalidad,
+          notas_adicionales,
+          provincia_residencia,
+          municipio_residencia,
+          fecha_hecho,
+          fecha_fallecimiento,
+          created_at,
           hechos (
-            *,
-            imputados (*,
-              fechas_juicio (*),
-              instancias_judiciales: instancias_judiciales (*)
+            id,
+            provincia,
+            municipio,
+            localidad_barrio,
+            tipo_lugar,
+            lugar_otro,
+            resumen_hecho,
+            tipo_crimen,
+            tipo_arma,
+            imputados (
+              id,
+              apellido_nombre,
+              alias,
+              edad,
+              menor_edad,
+              nacionalidad,
+              juzgado_ufi,
+              estado_procesal,
+              pena,
+              juicio_abreviado,
+              prision_perpetua,
+              fecha_veredicto,
+              documento_identidad,
+              tribunal_fallo,
+              es_extranjero,
+              detenido_previo,
+              fallecido,
+              es_reincidente,
+              cargos
             ),
-            seguimiento (*),
+            seguimiento (
+              id,
+              miembro_asignado,
+              contacto_familia,
+              telefono_contacto,
+              tipo_acompanamiento,
+              abogado_querellante,
+              amicus_curiae,
+              como_llego_caso,
+              primer_contacto,
+              notas_seguimiento,
+              email_contacto,
+              direccion_contacto,
+              telefono_miembro,
+              email_miembro,
+              fecha_asignacion,
+              proximas_acciones,
+              parentesco_contacto,
+              parentesco_otro,
+              tiene_abogado_querellante,
+              abogado_usina_amicus,
+              lista_miembros_asignados,
+              lista_contactos_familiares,
+              datos_abogados_querellantes
+            ),
             recursos (*)
           )
         `)
         .eq("id", caseId)
         .single()
 
-      if (victimError) throw victimError
+      if (victimError) {
+        console.log("[v0] Error fetching victim:", victimError)
+        throw victimError
+      }
 
-      const { data: victimResourcesData } = await supabase
-        .from("recursos")
-        .select("*")
-        .eq("victima_id", caseId)
-        .is("hecho_id", null)
-        .is("imputado_id", null)
+      console.log("[v0] Victim data loaded:", victimData)
+      console.log("[v0] fecha_hecho:", victimData?.fecha_hecho)
+      console.log("[v0] fecha_fallecimiento:", victimData?.fecha_fallecimiento)
 
       if (!victimData.hechos || victimData.hechos.length === 0) {
         throw new Error("No se encontraron hechos asociados a esta víctima")
@@ -174,7 +235,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             municipioResidencia: victimData.municipio_residencia || "",
             fechaHecho: victimData.fecha_hecho || "",
             fechaFallecimiento: victimData.fecha_fallecimiento || "",
-            resources: (victimResourcesData || []).map((r: any) => ({
+            resources: (victimData.hechos[0]?.recursos || []).map((r: any) => ({
               id: r.id,
               tipo: r.tipo || "",
               titulo: r.titulo || "",
