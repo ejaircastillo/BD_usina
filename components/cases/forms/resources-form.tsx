@@ -19,6 +19,7 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
     const newResource = {
       id: Date.now(),
       tipo: "",
+      tipo_otro: "", // Added tipo_otro field
       titulo: "",
       url: "",
       fuente: "",
@@ -28,7 +29,7 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
       archivo_nombre: null,
       archivo_tipo: null,
       archivo_size: null,
-      input_mode: "url", // "url" or "file"
+      input_mode: "url",
     }
     onChange([...data, newResource])
   }
@@ -54,7 +55,7 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
               archivo_nombre: file.name,
               archivo_tipo: file.type,
               archivo_size: file.size,
-              url: file.url, // Also set URL for display
+              url: file.url,
             }
           : resource,
       ),
@@ -132,6 +133,21 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {resource.tipo === "other" && (
+                    <div className="space-y-2">
+                      <Label htmlFor={`tipo-otro-${resource.id}`} className="text-sm font-medium text-slate-700">
+                        Especificar Tipo
+                      </Label>
+                      <Input
+                        id={`tipo-otro-${resource.id}`}
+                        placeholder="Ej: Informe pericial, Carta, etc."
+                        value={resource.tipo_otro || ""}
+                        onChange={(e) => updateResource(resource.id, "tipo_otro", e.target.value)}
+                        className="border-slate-300"
+                      />
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor={`date-${resource.id}`} className="text-sm font-medium text-slate-700">

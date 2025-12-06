@@ -103,6 +103,11 @@ export interface Seguimiento {
   fecha_asignacion: string | null
   proximas_acciones: string | null
   parentesco_contacto: string | null
+  lista_miembros_asignados: MiembroAsignado[] | null
+  lista_contactos_familiares: ContactoFamiliar[] | null
+  datos_abogados_querellantes: AbogadoQuerellante[] | null
+  tiene_abogado_querellante: string | null // 'si', 'no', 'ns_nc'
+  abogado_usina_amicus: string | null
   created_at: string
   updated_at: string
 }
@@ -169,3 +174,30 @@ export interface InstanciaJudicial {
 
 export type InstanciaJudicialInsert = Omit<InstanciaJudicial, "id" | "created_at" | "updated_at">
 export type InstanciaJudicialUpdate = Partial<InstanciaJudicialInsert>
+
+export interface MiembroAsignado {
+  id: number
+  nombre: string
+  telefono: string
+  email: string
+  fecha_asignacion: string
+}
+
+export interface ContactoFamiliar {
+  id: number
+  parentesco: string
+  parentesco_otro: string
+  nombre: string
+  telefono: string
+  email: string
+  direccion: string
+}
+
+export interface AbogadoQuerellante {
+  id: number
+  nombre: string
+  matricula: string
+  telefono: string
+  email: string
+  es_usina: boolean
+}
