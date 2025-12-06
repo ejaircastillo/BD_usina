@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Plus, Trash2, UserPlus, Users, Scale } from "lucide-react"
 
 interface FollowUpFormProps {
@@ -153,6 +154,34 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
               </div>
             ))}
           </div>
+
+          <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="amicus-curiae"
+                checked={data.amicusCuriae || false}
+                onCheckedChange={(checked) => handleChange("amicusCuriae", checked as boolean)}
+              />
+              <Label htmlFor="amicus-curiae" className="text-sm font-medium text-slate-700">
+                Amicus Curiae
+              </Label>
+            </div>
+
+            {data.amicusCuriae && (
+              <div className="mt-3 ml-6">
+                <Label htmlFor="abogadoUsinaFirmo" className="text-sm font-medium text-slate-700">
+                  Abogado de Usina que firmó
+                </Label>
+                <Input
+                  id="abogadoUsinaFirmo"
+                  placeholder="Nombre del abogado de Usina"
+                  value={data.abogadoUsinaFirmo || ""}
+                  onChange={(e) => handleChange("abogadoUsinaFirmo", e.target.value)}
+                  className="border-slate-300 mt-1"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -161,41 +190,50 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
             <h4 className="text-md font-medium text-amber-900">Abogado/a Querellante</h4>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-700">¿Tiene abogado/a querellante?</Label>
-              <Select
-                value={data.tieneAbogadoQuerellante || "ns_nc"}
-                onValueChange={(value) => handleChange("tieneAbogadoQuerellante", value)}
-              >
-                <SelectTrigger className="border-slate-300 bg-white">
-                  <SelectValue placeholder="Seleccionar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="si">Sí</SelectItem>
-                  <SelectItem value="no">No</SelectItem>
-                  <SelectItem value="ns_nc">NS/NC</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-4 mb-4">
+            <Label className="text-sm font-medium text-slate-700">¿La víctima tiene abogado/a querellante?</Label>
+            <RadioGroup
+              value={data.tieneAbogadoQuerellante || "ns_nc"}
+              onValueChange={(value) => handleChange("tieneAbogadoQuerellante", value)}
+              className="flex flex-wrap gap-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="si" id="abogado-si" />
+                <Label htmlFor="abogado-si" className="text-sm text-slate-700 cursor-pointer">
+                  Sí
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="no" id="abogado-no" />
+                <Label htmlFor="abogado-no" className="text-sm text-slate-700 cursor-pointer">
+                  No
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="ns_nc" id="abogado-ns" />
+                <Label htmlFor="abogado-ns" className="text-sm text-slate-700 cursor-pointer">
+                  NS/NC
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-700">¿Usina patrocina o presenta amicus?</Label>
-              <Select
-                value={data.abogadoUsinaAmicus || ""}
-                onValueChange={(value) => handleChange("abogadoUsinaAmicus", value)}
-              >
-                <SelectTrigger className="border-slate-300 bg-white">
-                  <SelectValue placeholder="Seleccionar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="patrocina">Usina patrocina</SelectItem>
-                  <SelectItem value="amicus">Usina presenta amicus</SelectItem>
-                  <SelectItem value="ambos">Ambos</SelectItem>
-                  <SelectItem value="ninguno">Ninguno</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="mb-4">
+            <Label className="text-sm font-medium text-slate-700">¿Usina patrocina o presenta amicus?</Label>
+            <Select
+              value={data.abogadoUsinaAmicus || ""}
+              onValueChange={(value) => handleChange("abogadoUsinaAmicus", value)}
+            >
+              <SelectTrigger className="border-slate-300 bg-white mt-1 w-full md:w-64">
+                <SelectValue placeholder="Seleccionar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="patrocina">Usina patrocina</SelectItem>
+                <SelectItem value="amicus">Usina presenta amicus</SelectItem>
+                <SelectItem value="ambos">Ambos</SelectItem>
+                <SelectItem value="ninguno">Ninguno</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {data.tieneAbogadoQuerellante === "si" && (
