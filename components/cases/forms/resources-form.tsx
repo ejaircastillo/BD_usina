@@ -127,6 +127,7 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
                         <SelectItem value="video">Video</SelectItem>
                         <SelectItem value="photo">Fotografía</SelectItem>
                         <SelectItem value="document">Documento</SelectItem>
+                        <SelectItem value="judicial_resolution">Resolución judicial</SelectItem>
                         <SelectItem value="audio">Audio</SelectItem>
                         <SelectItem value="social">Red Social</SelectItem>
                         <SelectItem value="other">Otro</SelectItem>

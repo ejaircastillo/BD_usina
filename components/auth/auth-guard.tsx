@@ -7,6 +7,14 @@ import { usePathname, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
 
+const DEV_BYPASS_AUTH = true
+
+const MOCK_USER = {
+  id: "dev-user-123",
+  email: "dev@usinajusticia.org",
+  name: "Usuario Desarrollo",
+}
+
 interface AuthGuardProps {
   children: React.ReactNode
 }
@@ -19,7 +27,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const supabase = createClient()
 
   useEffect(() => {
-    if (hasRedirectedRef.current) return
+    if (DEV_BYPASS_AUTH) {
+      setIsAuthenticated(true)
+      return
+    }
 
     let isMounted = true
 
