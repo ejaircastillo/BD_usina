@@ -6,20 +6,105 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Trash2, ExternalLink, Upload, LinkIcon } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Plus,
+  Trash2,
+  ExternalLink,
+  Upload,
+  LinkIcon,
+  Download,
+  FileText,
+  ImageIcon,
+  Video,
+  Music,
+  File,
+  Newspaper,
+  Share2,
+  Gavel,
+} from "lucide-react"
 import { FileUpload } from "@/components/ui/file-upload"
+import { getFileUrl, formatFileSize } from "@/lib/supabase/storage"
+
+interface SavedResource {
+  id: string
+  tipo: string | null
+  titulo: string | null
+  descripcion: string | null
+  url: string | null
+  fuente: string | null
+  fecha: string | null
+  archivo_path: string | null
+  archivo_nombre: string | null
+  archivo_tipo: string | null
+  archivo_size: number | null
+}
 
 interface ResourcesFormProps {
   data: any[]
   onChange: (data: any[]) => void
+  savedResources?: SavedResource[] // Previously saved resources from DB
 }
 
-export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
+function getResourceIcon(tipo: string | null, archivoTipo: string | null) {
+  // First check archivo_tipo for file-based resources
+  if (archivoTipo) {
+    if (archivoTipo.startsWith("image/")) return <ImageIcon className="w-5 h-5 text-blue-500" />
+    if (archivoTipo.startsWith("video/")) return <Video className="w-5 h-5 text-purple-500" />
+    if (archivoTipo.startsWith("audio/")) return <Music className="w-5 h-5 text-green-500" />
+    if (archivoTipo === "application/pdf") return <FileText className="w-5 h-5 text-red-500" />
+  }
+
+  // Then check tipo for URL-based resources
+  switch (tipo) {
+    case "news":
+      return <Newspaper className="w-5 h-5 text-orange-500" />
+    case "video":
+      return <Video className="w-5 h-5 text-purple-500" />
+    case "photo":
+      return <ImageIcon className="w-5 h-5 text-blue-500" />
+    case "document":
+      return <FileText className="w-5 h-5 text-slate-600" />
+    case "judicial_resolution":
+      return <Gavel className="w-5 h-5 text-amber-600" />
+    case "audio":
+      return <Music className="w-5 h-5 text-green-500" />
+    case "social":
+      return <Share2 className="w-5 h-5 text-pink-500" />
+    default:
+      return <File className="w-5 h-5 text-slate-400" />
+  }
+}
+
+function getTipoLabel(tipo: string | null): string {
+  switch (tipo) {
+    case "news":
+      return "Noticia"
+    case "video":
+      return "Video"
+    case "photo":
+      return "Fotografía"
+    case "document":
+      return "Documento"
+    case "judicial_resolution":
+      return "Resolución judicial"
+    case "audio":
+      return "Audio"
+    case "social":
+      return "Red Social"
+    case "other":
+      return "Otro"
+    default:
+      return tipo || "Sin tipo"
+  }
+}
+
+export function ResourcesForm({ data = [], onChange, savedResources = [] }: ResourcesFormProps) {
   const addResource = () => {
     const newResource = {
       id: Date.now(),
       tipo: "",
-      tipo_otro: "", // Added tipo_otro field
+      tipo_otro: "",
       titulo: "",
       url: "",
       fuente: "",
@@ -79,10 +164,91 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
     )
   }
 
+  const handleDownload = (resource: SavedResource) => {
+    if (resource.archivo_path) {
+      const url = getFileUrl(resource.archivo_path)
+      window.open(url, "_blank")
+    } else if (resource.url) {
+      window.open(resource.url, "_blank")
+    }
+  }
+
   return (
     <div className="space-y-6">
+      {savedResources.length > 0 && (
+        <Card className="border-green-200 bg-green-50/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-heading flex items-center gap-2 text-green-800">
+              <FileText className="w-5 h-5" />
+              Recursos Cargados ({savedResources.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border border-green-200 bg-white">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-green-100/50">
+                    <TableHead className="w-[50px]">Tipo</TableHead>
+                    <TableHead>Título / Nombre</TableHead>
+                    <TableHead className="hidden md:table-cell">Fuente</TableHead>
+                    <TableHead className="hidden md:table-cell">Tamaño</TableHead>
+                    <TableHead className="w-[100px] text-right">Acción</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {savedResources.map((resource) => (
+                    <TableRow key={resource.id}>
+                      <TableCell>
+                        <div className="flex items-center justify-center">
+                          {getResourceIcon(resource.tipo, resource.archivo_tipo)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-slate-900 truncate max-w-[200px]">
+                            {resource.titulo || resource.archivo_nombre || "Sin título"}
+                          </span>
+                          <span className="text-xs text-slate-500">{getTipoLabel(resource.tipo)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-slate-600">{resource.fuente || "-"}</TableCell>
+                      <TableCell className="hidden md:table-cell text-slate-600">
+                        {resource.archivo_size ? formatFileSize(resource.archivo_size) : "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownload(resource)}
+                          className="flex items-center gap-1 text-green-700 hover:text-green-800 hover:bg-green-100"
+                        >
+                          {resource.archivo_path ? (
+                            <>
+                              <Download className="w-4 h-4" />
+                              <span className="hidden sm:inline">Descargar</span>
+                            </>
+                          ) : (
+                            <>
+                              <ExternalLink className="w-4 h-4" />
+                              <span className="hidden sm:inline">Ver</span>
+                            </>
+                          )}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Existing: Add new resources section */}
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-slate-900 font-heading">Recursos Multimedia</h3>
+        <h3 className="text-lg font-semibold text-slate-900 font-heading">
+          {savedResources.length > 0 ? "Agregar Nuevos Recursos" : "Recursos Multimedia"}
+        </h3>
         <Button onClick={addResource} className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700">
           <Plus className="w-4 h-4" />
           Agregar Recurso
@@ -91,7 +257,7 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
 
       {data.length === 0 ? (
         <div className="text-center py-8 text-slate-500">
-          <p>No hay recursos multimedia registrados.</p>
+          <p>No hay recursos nuevos para agregar.</p>
           <p className="text-sm">
             Haga clic en "Agregar Recurso" para añadir archivos, enlaces a noticias, videos, fotos, etc.
           </p>
@@ -101,7 +267,7 @@ export function ResourcesForm({ data = [], onChange }: ResourcesFormProps) {
           {data.map((resource, index) => (
             <Card key={resource.id} className="border-slate-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                <CardTitle className="text-base font-heading">Recurso #{index + 1}</CardTitle>
+                <CardTitle className="text-base font-heading">Nuevo Recurso #{index + 1}</CardTitle>
                 <Button
                   variant="outline"
                   size="sm"
