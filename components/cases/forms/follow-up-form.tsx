@@ -8,11 +8,16 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Plus, Trash2, UserPlus, Users, Scale } from "lucide-react"
+import { Plus, Trash2, UserPlus, Users, Scale, FileText } from "lucide-react"
+import { ResourcesForm } from "./resources-form"
+import type { Recurso } from "@/lib/types/database"
 
 interface FollowUpFormProps {
   data: any
   onChange: (data: any) => void
+  resources?: any[]
+  onResourcesChange?: (resources: any[]) => void
+  savedResources?: Recurso[]
 }
 
 const PARENTESCO_OPTIONS = [
@@ -28,7 +33,13 @@ const PARENTESCO_OPTIONS = [
   "Otro",
 ]
 
-export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
+export function FollowUpForm({
+  data,
+  onChange,
+  resources = [],
+  onResourcesChange,
+  savedResources = [],
+}: FollowUpFormProps) {
   const handleChange = (field: string, value: string | boolean) => {
     onChange({
       ...data,
@@ -536,6 +547,17 @@ export function FollowUpForm({ data, onChange }: FollowUpFormProps) {
             className="border-slate-300"
             rows={3}
           />
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-slate-200">
+          <div className="flex items-center gap-2 mb-4">
+            <FileText className="w-5 h-5 text-purple-600" />
+            <h3 className="text-lg font-semibold text-slate-900 font-heading">Recursos y Documentos del Caso</h3>
+          </div>
+          <p className="text-sm text-slate-500 mb-4">
+            Sube documentos generales del caso: notas de prensa, resoluciones judiciales, informes, etc.
+          </p>
+          <ResourcesForm data={resources} onChange={onResourcesChange || (() => {})} savedResources={savedResources} />
         </div>
       </div>
     </div>

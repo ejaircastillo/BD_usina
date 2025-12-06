@@ -853,6 +853,9 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 <FollowUpForm
                   data={formData.followUp}
                   onChange={(data) => setFormData((prev) => ({ ...prev, followUp: data }))}
+                  resources={formData.resources}
+                  onResourcesChange={(resources) => setFormData((prev) => ({ ...prev, resources }))}
+                  savedResources={formData.resources.filter((r: any) => r.id && typeof r.id === "string")}
                 />
               </div>
             </TabsContent>
