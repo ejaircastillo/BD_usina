@@ -2,16 +2,18 @@ import { Header } from "@/components/layout/header"
 import { CaseDetailContent } from "@/components/cases/case-detail-content"
 
 interface CaseDetailPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
-export default function CaseDetailPage({ params }: CaseDetailPageProps) {
+export default async function CaseDetailPage({ params }: CaseDetailPageProps) {
+  const { id } = await params
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
-      <CaseDetailContent caseId={params.id} />
+      <CaseDetailContent caseId={id} />
     </div>
   )
 }

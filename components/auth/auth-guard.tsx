@@ -19,8 +19,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const supabase = createClient()
 
   useEffect(() => {
-    if (hasRedirectedRef.current) return
-
     let isMounted = true
 
     const checkAuth = async () => {

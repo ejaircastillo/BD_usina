@@ -22,7 +22,15 @@ const ESTADO_PROCESAL_OPTIONS = [
   { value: "menor_inimputable", label: "Menor inimputable con medida de seguridad" },
 ]
 
-const judicialLevels = ["Primera Instancia", "Cámara de Apelaciones", "Tribunal Superior / Casación", "Corte Suprema"]
+const judicialLevels = [
+  "Fiscalía o Juzgado de Instrucción",
+  "Juzgado de primera instancia",
+  "Cámara de apelaciones",
+  "Cámara de casación",
+  "Tribunal superior",
+  "Corte suprema",
+  "Juzgado de ejecución",
+]
 
 interface AccusedFormProps {
   data: any[]
