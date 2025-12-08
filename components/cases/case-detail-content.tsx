@@ -24,7 +24,11 @@ import {
   Download,
   ImageIcon,
   File,
-  LinkIcon,
+  Video,
+  Newspaper,
+  Mic,
+  Share2,
+  Paperclip,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -184,11 +188,94 @@ const getStatusColor = (status: string) => {
   }
 }
 
-const getResourceIcon = (tipo: string | null, archivoTipo: string | null) => {
-  if (archivoTipo?.startsWith("image/")) return <ImageIcon className="w-4 h-4" />
-  if (archivoTipo?.includes("pdf")) return <File className="w-4 h-4" />
-  if (tipo === "noticia" || tipo === "video") return <ExternalLink className="w-4 h-4" />
-  return <LinkIcon className="w-4 h-4" />
+const getResourceTypeIcon = (tipo: string | null, archivoTipo: string | null) => {
+  if (archivoTipo?.startsWith("image/")) return <ImageIcon className="w-4 h-4 text-green-600" />
+  if (archivoTipo?.includes("pdf")) return <File className="w-4 h-4 text-red-600" />
+
+  switch (tipo?.toLowerCase()) {
+    case "noticia":
+      return <Newspaper className="w-4 h-4 text-blue-600" />
+    case "video":
+      return <Video className="w-4 h-4 text-purple-600" />
+    case "foto":
+    case "imagen":
+      return <ImageIcon className="w-4 h-4 text-green-600" />
+    case "documento":
+      return <FileText className="w-4 h-4 text-amber-600" />
+    case "resolución judicial":
+      return <Scale className="w-4 h-4 text-slate-600" />
+    case "audio":
+      return <Mic className="w-4 h-4 text-pink-600" />
+    case "red social":
+      return <Share2 className="w-4 h-4 text-cyan-600" />
+    default:
+      return <Paperclip className="w-4 h-4 text-slate-500" />
+  }
+}
+
+interface ResourceViewerProps {
+  recursos: Recurso[]
+  getFileUrl: (path: string) => string
+  title?: string
+}
+
+function ResourceViewer({ recursos, getFileUrl, title = "Recursos Adjuntos" }: ResourceViewerProps) {
+  if (recursos.length === 0) return null
+
+  return (
+    <div className="mt-4 pt-4 border-t border-slate-100">
+      <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+        <Paperclip className="w-4 h-4" />
+        {title} ({recursos.length})
+      </h4>
+      <div className="space-y-2">
+        {recursos.map((recurso) => (
+          <div
+            key={recurso.id}
+            className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+          >
+            <div className="p-2 bg-white rounded-lg border border-slate-200">
+              {getResourceTypeIcon(recurso.tipo, recurso.archivo_tipo)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-slate-900 text-sm truncate">
+                {recurso.titulo || recurso.archivo_nombre || "Sin título"}
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                {recurso.tipo && (
+                  <Badge variant="outline" className="text-xs">
+                    {recurso.tipo}
+                  </Badge>
+                )}
+                {recurso.fuente && <span className="text-xs text-slate-500">Fuente: {recurso.fuente}</span>}
+              </div>
+            </div>
+            {recurso.archivo_path ? (
+              <a
+                href={getFileUrl(recurso.archivo_path)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors shrink-0"
+              >
+                <Download className="w-3 h-3" />
+                Descargar
+              </a>
+            ) : recurso.url ? (
+              <a
+                href={recurso.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-3 py-1.5 bg-slate-600 text-white text-xs font-medium rounded-md hover:bg-slate-700 transition-colors shrink-0"
+              >
+                <ExternalLink className="w-3 h-3" />
+                Ver
+              </a>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
@@ -245,13 +332,10 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
   }
 
   const loadLegacyCase = async (victimaData: any) => {
-    // Find the hecho linked to this victima
     const { data: hechosArray } = await supabase.from("hechos").select("*").eq("victima_id", victimaData.id)
-
     const hechoData = hechosArray?.[0] || null
 
-    // Check if there's a caso record
-    let casoId = victimaData.id // Use victima.id as fallback
+    let casoId = victimaData.id
     let estadoGeneral = "En investigación"
 
     if (hechoData) {
@@ -273,7 +357,6 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
   const loadLegacyCaseFromHecho = async (hechoData: any) => {
     const victimaData = hechoData.victimas || null
 
-    // Check if there's a caso record
     let casoId = victimaData?.id || hechoData.id
     let estadoGeneral = "En investigación"
 
@@ -337,20 +420,30 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
       seguimientoData = seguimientoArray?.[0] || null
     }
 
-    // Get recursos
     let recursosData: Recurso[] = []
+
+    // Get hecho-level recursos
     if (hechoData?.id) {
-      const { data: recursosArray } = await supabase.from("recursos").select("*").eq("hecho_id", hechoData.id)
-      recursosData = recursosArray || []
+      const { data: hechoRecursos } = await supabase.from("recursos").select("*").eq("hecho_id", hechoData.id)
+      recursosData = [...recursosData, ...(hechoRecursos || [])]
     }
 
     // Get victim-specific recursos
     if (victimaData?.id) {
-      const { data: victimRecursosArray } = await supabase.from("recursos").select("*").eq("victima_id", victimaData.id)
-      recursosData = [...recursosData, ...(victimRecursosArray || [])]
+      const { data: victimRecursos } = await supabase.from("recursos").select("*").eq("victima_id", victimaData.id)
+      recursosData = [...recursosData, ...(victimRecursos || [])]
     }
 
-    // Get hermanos de hecho (other victims of the same incident)
+    // Get imputado-specific recursos
+    for (const imp of imputadosData) {
+      const { data: impRecursos } = await supabase.from("recursos").select("*").eq("imputado_id", imp.id)
+      recursosData = [...recursosData, ...(impRecursos || [])]
+    }
+
+    // Remove duplicates by id
+    const uniqueRecursos = recursosData.filter((r, index, self) => index === self.findIndex((t) => t.id === r.id))
+
+    // Get hermanos de hecho
     let hermanosHecho: HermanoHecho[] = []
     if (hechoData?.id) {
       const { data: otrosCasosArray } = await supabase
@@ -373,7 +466,7 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
       hecho: hechoData,
       imputados: imputadosData,
       seguimiento: seguimientoData,
-      recursos: recursosData,
+      recursos: uniqueRecursos,
       hermanos_hecho: hermanosHecho,
       estado_general: estadoGeneral,
     })
@@ -425,6 +518,10 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
   }
 
   const { victima, hecho, imputados, seguimiento, recursos, hermanos_hecho, estado_general } = caseData
+
+  const getVictimResources = () => recursos.filter((r) => r.victima_id === victima.id && !r.imputado_id)
+  const getImputadoResources = (imputadoId: string) => recursos.filter((r) => r.imputado_id === imputadoId)
+  const getGeneralResources = () => recursos.filter((r) => !r.victima_id && !r.imputado_id)
 
   return (
     <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -576,6 +673,8 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
                 <p className="text-slate-900 mt-1">{victima.notas_adicionales}</p>
               </div>
             )}
+
+            <ResourceViewer recursos={getVictimResources()} getFileUrl={getFileUrl} title="Documentos de la Víctima" />
           </CardContent>
         </Card>
 
@@ -689,6 +788,7 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
           </Card>
         )}
 
+        {/* Imputados */}
         {imputados.length > 0 && (
           <Card className="border-slate-200">
             <CardHeader>
@@ -832,6 +932,12 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
                             </div>
                           </div>
                         )}
+
+                        <ResourceViewer
+                          recursos={getImputadoResources(imputado.id)}
+                          getFileUrl={getFileUrl}
+                          title="Documentos del Imputado"
+                        />
                       </div>
                     </AccordionContent>
                   </AccordionItem>
@@ -841,6 +947,7 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
           </Card>
         )}
 
+        {/* Seguimiento */}
         {seguimiento && (
           <Card className="border-slate-200">
             <CardHeader>
@@ -850,7 +957,6 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Tipo de Acompañamiento */}
               {seguimiento.tipo_acompanamiento && seguimiento.tipo_acompanamiento.length > 0 && (
                 <div>
                   <label className="text-sm font-medium text-slate-500">Tipo de Acompañamiento</label>
@@ -897,7 +1003,6 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
                 )}
               </div>
 
-              {/* Contacto Familiar */}
               {(seguimiento.contacto_familia || seguimiento.telefono_contacto || seguimiento.email_contacto) && (
                 <div className="pt-4 border-t border-slate-100">
                   <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
@@ -943,7 +1048,6 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
                 </div>
               )}
 
-              {/* Notas */}
               {seguimiento.notas_seguimiento && (
                 <div className="pt-4 border-t border-slate-100">
                   <label className="text-sm font-medium text-slate-500">Notas de Seguimiento</label>
@@ -956,70 +1060,26 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
                   <p className="text-slate-900 mt-1 whitespace-pre-wrap">{seguimiento.proximas_acciones}</p>
                 </div>
               )}
+
+              <ResourceViewer
+                recursos={getGeneralResources()}
+                getFileUrl={getFileUrl}
+                title="Recursos Generales del Caso"
+              />
             </CardContent>
           </Card>
         )}
 
-        {recursos.length > 0 && (
+        {!seguimiento && getGeneralResources().length > 0 && (
           <Card className="border-slate-200">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-slate-600" />
-                Recursos y Archivos ({recursos.length})
+                Recursos del Caso
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {recursos.map((recurso) => (
-                  <div
-                    key={recurso.id}
-                    className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-slate-100 rounded-lg">
-                        {getResourceIcon(recurso.tipo, recurso.archivo_tipo)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-slate-900 truncate">
-                          {recurso.titulo || recurso.archivo_nombre || "Sin título"}
-                        </h4>
-                        {recurso.descripcion && (
-                          <p className="text-sm text-slate-600 mt-1 line-clamp-2">{recurso.descripcion}</p>
-                        )}
-                        {recurso.fuente && <p className="text-xs text-slate-500 mt-1">Fuente: {recurso.fuente}</p>}
-                        <div className="flex items-center gap-2 mt-2">
-                          {recurso.tipo && (
-                            <Badge variant="outline" className="text-xs">
-                              {recurso.tipo}
-                            </Badge>
-                          )}
-                          {recurso.archivo_path ? (
-                            <a
-                              href={getFileUrl(recurso.archivo_path)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-blue-600 hover:underline flex items-center gap-1"
-                            >
-                              <Download className="w-3 h-3" />
-                              Descargar
-                            </a>
-                          ) : recurso.url ? (
-                            <a
-                              href={recurso.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-blue-600 hover:underline flex items-center gap-1"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                              Abrir enlace
-                            </a>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ResourceViewer recursos={getGeneralResources()} getFileUrl={getFileUrl} title="Recursos Generales" />
             </CardContent>
           </Card>
         )}
