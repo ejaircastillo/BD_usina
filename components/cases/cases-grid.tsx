@@ -74,7 +74,8 @@ export function CasesGrid({ filters = {} }: CasesGridProps) {
       const { data: victimData, error: victimError } = await supabase.from("victimas").select(`
           id,
           nombre_completo,
-          telefono_contacto_familiar
+          provincia_residencia,
+          municipio_residencia
         `)
 
       if (victimError) throw victimError
@@ -124,7 +125,7 @@ export function CasesGrid({ filters = {} }: CasesGridProps) {
           status: imputado?.estado_procesal || "En investigación",
           familyContactName: familyContactParts[0] || "No especificado",
           familyRelationship: familyContactParts[1] || "Familiar",
-          familyContactPhone: victim.telefono_contacto_familiar || "No especificado",
+          familyContactPhone: victim.provincia_residencia || "No especificado",
         }
       })
 
@@ -217,9 +218,9 @@ export function CasesGrid({ filters = {} }: CasesGridProps) {
         <Search className="w-12 h-12 text-slate-400 mx-auto mb-4" />
         <h3 className="text-lg font-medium text-slate-900 mb-2">No se encontraron casos</h3>
         <p className="text-slate-600 mb-4">
-          {Object.keys(filters).some((key) => filters[key as keyof typeof filters])
-            ? "Intente ajustar los filtros para ver más resultados."
-            : "No hay casos registrados en el sistema."}
+          {Object.keys(filters).some((key) => filters[key as keyof typeof filters]) && (
+            <span className="ml-2 text-slate-500">(filtrados)</span>
+          )}
         </p>
       </div>
     )
