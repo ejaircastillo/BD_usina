@@ -8,12 +8,12 @@ export interface Victima {
   fecha_nacimiento: string | null
   profesion: string | null
   nacionalidad: string | null
-  direccion_completa: string | null
-  telefono_contacto_familiar: string | null
   redes_sociales: string | null
   notas_adicionales: string | null
   provincia_residencia: string | null
   municipio_residencia: string | null
+  fecha_hecho: string | null
+  fecha_fallecimiento: string | null
   created_at: string
   updated_at: string
 }
