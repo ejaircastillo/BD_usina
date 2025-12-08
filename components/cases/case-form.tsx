@@ -437,11 +437,13 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
         if (incidentError) throw incidentError
 
-        // Delete existing accused, instances, and resources related to the fact
+        // Delete existing accused, instances, and trial dates (these get recreated)
         await supabase.from("imputados").delete().eq("hecho_id", hechoId)
         await supabase.from("instancias_judiciales").delete().eq("hecho_id", hechoId)
-        await supabase.from("fechas_juicio").delete().eq("hecho_id", hechoId) // Clean up trial dates associated with the fact
-        await supabase.from("recursos").delete().eq("hecho_id", hechoId).is("imputado_id", null).is("victima_id", null) // Delete general resources
+        await supabase.from("fechas_juicio").delete().eq("hecho_id", hechoId)
+
+        // Do NOT delete victim or general resources - we'll only add new ones
+        await supabase.from("recursos").delete().eq("hecho_id", hechoId).not("imputado_id", "is", null)
 
         // Insert new accused and their related data
         if (formData.accused && Array.isArray(formData.accused) && formData.accused.length > 0) {
@@ -488,7 +490,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 }
               }
 
-              // Insert accused resources
+              // Insert accused resources (all are new since imputados were recreated)
               if (accused.resources && Array.isArray(accused.resources)) {
                 for (const resource of accused.resources) {
                   if (resource.titulo || resource.url || resource.archivo_path) {
@@ -548,9 +550,11 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           if (followUpError) throw followUpError
         }
 
-        // Update general resources
         if (formData.resources && Array.isArray(formData.resources) && formData.resources.length > 0) {
-          for (const resource of formData.resources) {
+          const newResources = formData.resources.filter(
+            (r: any) => !r.id || typeof r.id !== "string" || r.id.startsWith("temp-"),
+          )
+          for (const resource of newResources) {
             if (resource.titulo || resource.url || resource.archivo_path) {
               await supabase.from("recursos").insert([
                 {
@@ -570,20 +574,16 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         }
 
-        // Update victim resources
-        await supabase
-          .from("recursos")
-          .delete()
-          .eq("victima_id", victimId!)
-          .is("hecho_id", null)
-          .is("imputado_id", null) // Delete existing victim resources
         if (victim.resources && Array.isArray(victim.resources) && victim.resources.length > 0) {
-          for (const resource of victim.resources) {
+          const newVictimResources = victim.resources.filter(
+            (r: any) => !r.id || typeof r.id !== "string" || r.id.startsWith("temp-"),
+          )
+          for (const resource of newVictimResources) {
             if (resource.titulo || resource.url || resource.archivo_path) {
               await supabase.from("recursos").insert([
                 {
                   victima_id: victimId!,
-                  hecho_id: hechoId, // Link to the fact as well if applicable
+                  hecho_id: hechoId,
                   tipo: resource.tipo || null,
                   titulo: resource.titulo || null,
                   url: resource.url || null,
