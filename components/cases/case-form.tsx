@@ -174,6 +174,10 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             .from("instancias_judiciales")
             .select("*")
             .eq("imputado_id", imputado.id)
+          const { data: trialDatesData } = await supabase
+            .from("fechas_juicio")
+            .select("fecha_audiencia")
+            .eq("imputado_id", imputado.id)
 
           return {
             id: imputado.id,
@@ -195,7 +199,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             fallecido: imputado.fallecido || false,
             esReincidente: imputado.es_reincidente || false,
             cargos: imputado.cargos || "",
-            trialDates: [],
+            trialDates: (trialDatesData || []).map((td: any) => td.fecha_audiencia),
             instanciasJudiciales: (instanciasData || []).map((inst: any) => ({
               id: inst.id,
               numeroCausa: inst.numero_causa || "",
@@ -396,9 +400,9 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
     try {
       if (mode === "edit" && caseId) {
         const victim = formData.victims[0]
-        const victimId = realIds.victimaId // Get the stored victim ID
+        const victimId = realIds.victimaId
+        const hechoId = realIds.hechoId
 
-        // Update victim
         const { error: victimError } = await supabase
           .from("victimas")
           .update({
@@ -414,13 +418,10 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             fecha_hecho: victim.fechaHecho || null,
             fecha_fallecimiento: victim.fechaFallecimiento || null,
           })
-          .eq("id", victimId!) // Use the stored ID
+          .eq("id", victimId!)
 
         if (victimError) throw victimError
 
-        const hechoId = realIds.hechoId // Use the stored hechoId
-
-        // Update incident
         const { error: incidentError } = await supabase
           .from("hechos")
           .update({
@@ -433,52 +434,107 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             tipo_crimen: formData.incident.tipoCrimen || null,
             tipo_arma: formData.incident.tipoArma || null,
           })
-          .eq("id", hechoId!) // Use the stored ID
+          .eq("id", hechoId!)
 
         if (incidentError) throw incidentError
 
-        // Delete existing accused, instances, and trial dates (these get recreated)
-        await supabase.from("imputados").delete().eq("hecho_id", hechoId)
-        await supabase.from("instancias_judiciales").delete().eq("hecho_id", hechoId)
-        await supabase.from("fechas_juicio").delete().eq("hecho_id", hechoId)
+        if (formData.accused && Array.isArray(formData.accused)) {
+          // Get current imputados IDs from DB to detect deletions
+          const { data: existingImputados } = await supabase.from("imputados").select("id").eq("hecho_id", hechoId!)
 
-        // Do NOT delete victim or general resources - we'll only add new ones
-        await supabase.from("recursos").delete().eq("hecho_id", hechoId).not("imputado_id", "is", null)
+          const existingImputadoIds = existingImputados?.map((i) => i.id) || []
+          const formImputadoIds = formData.accused
+            .filter((a: any) => a.id && typeof a.id === "string" && !a.id.startsWith("temp-"))
+            .map((a: any) => a.id)
 
-        // Insert new accused and their related data
-        if (formData.accused && Array.isArray(formData.accused) && formData.accused.length > 0) {
+          // Delete imputados that were removed from the form (diffing)
+          const imputadosToDelete = existingImputadoIds.filter((id) => !formImputadoIds.includes(id))
+          for (const idToDelete of imputadosToDelete) {
+            // First delete related records
+            await supabase.from("recursos").delete().eq("imputado_id", idToDelete)
+            await supabase.from("instancias_judiciales").delete().eq("imputado_id", idToDelete)
+            await supabase.from("fechas_juicio").delete().eq("imputado_id", idToDelete)
+            // Then delete the imputado
+            await supabase.from("imputados").delete().eq("id", idToDelete)
+          }
+
+          // Process each imputado in the form
           for (const accused of formData.accused) {
-            if (accused.apellidoNombre) {
-              const { data: accusedData, error: accusedError } = await supabase
+            if (!accused.apellidoNombre) continue
+
+            const hasExistingId = accused.id && typeof accused.id === "string" && !accused.id.startsWith("temp-")
+
+            let accusedId: string
+
+            if (hasExistingId) {
+              const { error: updateError } = await supabase
                 .from("imputados")
-                .insert([buildImputadoInsert(accused, hechoId!)])
-                .select()
-                .single()
+                .update({
+                  apellido_nombre: accused.apellidoNombre,
+                  alias: accused.alias || null,
+                  edad: accused.edad || null,
+                  menor_edad: accused.menorEdad || false,
+                  nacionalidad: accused.nacionalidad || null,
+                  juzgado_ufi: accused.juzgadoUfi || null,
+                  estado_procesal: accused.estadoProcesal || null,
+                  pena: accused.pena || null,
+                  juicio_abreviado: accused.juicioAbreviado || false,
+                  prision_perpetua: accused.prisionPerpetua || false,
+                  fecha_veredicto: accused.fechaVeredicto || null,
+                  documento_identidad: accused.documentoIdentidad || null,
+                  tribunal_fallo: accused.tribunalFallo || null,
+                  es_extranjero: accused.esExtranjero || false,
+                  detenido_previo: accused.detenidoPrevio || false,
+                  fallecido: accused.fallecido || false,
+                  es_reincidente: accused.esReincidente || false,
+                  cargos: accused.cargos || null,
+                })
+                .eq("id", accused.id)
 
-              if (accusedError) throw accusedError
+              if (updateError) throw updateError
+              accusedId = accused.id
 
-              // Insert trial dates
-              if (accused.trialDates && Array.isArray(accused.trialDates)) {
-                for (const date of accused.trialDates) {
-                  if (date) {
-                    await supabase.from("fechas_juicio").insert([
-                      {
-                        imputado_id: accusedData.id,
-                        fecha_audiencia: date,
-                        hecho_id: hechoId,
-                      },
-                    ])
-                  }
-                }
-              }
-
-              // Insert judicial instances
               if (accused.instanciasJudiciales && Array.isArray(accused.instanciasJudiciales)) {
+                // Get existing instancias for this imputado
+                const { data: existingInstancias } = await supabase
+                  .from("instancias_judiciales")
+                  .select("id")
+                  .eq("imputado_id", accusedId)
+
+                const existingInstanciaIds = existingInstancias?.map((i) => i.id) || []
+                const formInstanciaIds = accused.instanciasJudiciales
+                  .filter((i: any) => i.id && typeof i.id === "string" && !i.id.startsWith("temp-"))
+                  .map((i: any) => i.id)
+
+                // Delete instancias removed from form
+                const instanciasToDelete = existingInstanciaIds.filter((id) => !formInstanciaIds.includes(id))
+                for (const idToDelete of instanciasToDelete) {
+                  await supabase.from("instancias_judiciales").delete().eq("id", idToDelete)
+                }
+
+                // Update or insert instancias
                 for (const instancia of accused.instanciasJudiciales) {
-                  if (instancia.numeroCausa || instancia.fiscalFiscalia || instancia.caratula) {
+                  if (!instancia.numeroCausa && !instancia.fiscalFiscalia && !instancia.caratula) continue
+
+                  const hasInstanciaId =
+                    instancia.id && typeof instancia.id === "string" && !instancia.id.startsWith("temp-")
+
+                  if (hasInstanciaId) {
+                    // Update existing instancia
+                    await supabase
+                      .from("instancias_judiciales")
+                      .update({
+                        numero_causa: instancia.numeroCausa || null,
+                        fiscal_fiscalia: instancia.fiscalFiscalia || null,
+                        caratula: instancia.caratula || null,
+                        orden_nivel: instancia.ordenNivel || null,
+                      })
+                      .eq("id", instancia.id)
+                  } else {
+                    // Insert new instancia
                     await supabase.from("instancias_judiciales").insert([
                       {
-                        imputado_id: accusedData.id,
+                        imputado_id: accusedId,
                         hecho_id: hechoId,
                         numero_causa: instancia.numeroCausa || null,
                         fiscal_fiscalia: instancia.fiscalFiscalia || null,
@@ -490,13 +546,65 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 }
               }
 
-              // Insert accused resources (all are new since imputados were recreated)
+              if (accused.resources && Array.isArray(accused.resources)) {
+                const newResources = accused.resources.filter(
+                  (r: any) => !r.id || typeof r.id !== "string" || r.id.startsWith("temp-"),
+                )
+                for (const resource of newResources) {
+                  if (resource.titulo || resource.url || resource.archivo_path) {
+                    await supabase.from("recursos").insert([
+                      {
+                        imputado_id: accusedId,
+                        hecho_id: hechoId,
+                        tipo: resource.tipo || null,
+                        titulo: resource.titulo || null,
+                        url: resource.url || null,
+                        fuente: resource.fuente || null,
+                        descripcion: resource.descripcion || null,
+                        archivo_path: resource.archivo_path || null,
+                        archivo_nombre: resource.archivo_nombre || null,
+                        archivo_tipo: resource.archivo_tipo || null,
+                        archivo_size: resource.archivo_size || null,
+                      },
+                    ])
+                  }
+                }
+              }
+            } else {
+              const { data: accusedData, error: accusedError } = await supabase
+                .from("imputados")
+                .insert([buildImputadoInsert(accused, hechoId!)])
+                .select()
+                .single()
+
+              if (accusedError) throw accusedError
+              accusedId = accusedData.id
+
+              // Insert all instancias for new imputado
+              if (accused.instanciasJudiciales && Array.isArray(accused.instanciasJudiciales)) {
+                for (const instancia of accused.instanciasJudiciales) {
+                  if (instancia.numeroCausa || instancia.fiscalFiscalia || instancia.caratula) {
+                    await supabase.from("instancias_judiciales").insert([
+                      {
+                        imputado_id: accusedId,
+                        hecho_id: hechoId,
+                        numero_causa: instancia.numeroCausa || null,
+                        fiscal_fiscalia: instancia.fiscalFiscalia || null,
+                        caratula: instancia.caratula || null,
+                        orden_nivel: instancia.ordenNivel || null,
+                      },
+                    ])
+                  }
+                }
+              }
+
+              // Insert all resources for new imputado
               if (accused.resources && Array.isArray(accused.resources)) {
                 for (const resource of accused.resources) {
                   if (resource.titulo || resource.url || resource.archivo_path) {
                     await supabase.from("recursos").insert([
                       {
-                        imputado_id: accusedData.id,
+                        imputado_id: accusedId,
                         hecho_id: hechoId,
                         tipo: resource.tipo || null,
                         titulo: resource.titulo || null,
@@ -513,41 +621,68 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 }
               }
             }
+
+            await supabase.from("fechas_juicio").delete().eq("imputado_id", accusedId)
+            if (accused.trialDates && Array.isArray(accused.trialDates)) {
+              for (const date of accused.trialDates) {
+                if (date) {
+                  await supabase.from("fechas_juicio").insert([
+                    {
+                      imputado_id: accusedId,
+                      fecha_audiencia: date,
+                      hecho_id: hechoId,
+                    },
+                  ])
+                }
+              }
+            }
           }
         }
 
-        // Update or insert seguimiento
-        await supabase.from("seguimiento").delete().eq("hecho_id", hechoId) // Remove old record if exists
+        const { data: existingSeguimiento } = await supabase
+          .from("seguimiento")
+          .select("id")
+          .eq("hecho_id", hechoId!)
+          .single()
+
         if (formData.followUp) {
-          const { error: followUpError } = await supabase.from("seguimiento").insert([
-            {
-              hecho_id: hechoId,
-              primer_contacto: formData.followUp.primerContacto || null,
-              como_llego_caso: formData.followUp.comoLlegoCaso || null,
-              miembro_asignado: formData.followUp.miembroAsignado || null,
-              contacto_familia: formData.followUp.contactoFamiliar || null,
-              telefono_contacto: formData.followUp.telefonoContacto || null,
-              tipo_acompanamiento: formData.followUp.tipoAcompanamiento || null,
-              abogado_querellante: formData.followUp.abogadoQuerellante || null,
-              amicus_curiae: formData.followUp.amicusCuriae || false,
-              notas_seguimiento: formData.followUp.notasSeguimiento || null,
-              email_contacto: formData.followUp.emailContacto || null,
-              direccion_contacto: formData.followUp.direccionContacto || null,
-              telefono_miembro: formData.followUp.telefonoMiembro || null,
-              email_miembro: formData.followUp.emailMiembro || null,
-              fecha_asignacion: formData.followUp.fechaAsignacion || null,
-              proximas_acciones: formData.followUp.proximasAcciones || null,
-              parentesco_contacto: formData.followUp.parentescoContacto || null,
-              parentesco_otro: formData.followUp.parentescoOtro || null,
-              tiene_abogado_querellante: formData.followUp.tieneAbogadoQuerellante || "ns_nc",
-              abogado_usina_amicus: formData.followUp.abogadoUsinaAmicus || null,
-              abogado_amicus_firmante: formData.followUp.abogadoAmicusFirmante || null,
-              lista_miembros_asignados: formData.followUp.listaMiembrosAsignados || null,
-              lista_contactos_familiares: formData.followUp.listaContactosFamiliares || null,
-              datos_abogados_querellantes: formData.followUp.datosAbogadosQuerellantes || null,
-            },
-          ])
-          if (followUpError) throw followUpError
+          const seguimientoData = {
+            hecho_id: hechoId,
+            primer_contacto: formData.followUp.primerContacto || null,
+            como_llego_caso: formData.followUp.comoLlegoCaso || null,
+            miembro_asignado: formData.followUp.miembroAsignado || null,
+            contacto_familia: formData.followUp.contactoFamiliar || null,
+            telefono_contacto: formData.followUp.telefonoContacto || null,
+            tipo_acompanamiento: formData.followUp.tipoAcompanamiento || null,
+            abogado_querellante: formData.followUp.abogadoQuerellante || null,
+            amicus_curiae: formData.followUp.amicusCuriae || false,
+            notas_seguimiento: formData.followUp.notasSeguimiento || null,
+            email_contacto: formData.followUp.emailContacto || null,
+            direccion_contacto: formData.followUp.direccionContacto || null,
+            telefono_miembro: formData.followUp.telefonoMiembro || null,
+            email_miembro: formData.followUp.emailMiembro || null,
+            fecha_asignacion: formData.followUp.fechaAsignacion || null,
+            proximas_acciones: formData.followUp.proximasAcciones || null,
+            parentesco_contacto: formData.followUp.parentescoContacto || null,
+            parentesco_otro: formData.followUp.parentescoOtro || null,
+            tiene_abogado_querellante: formData.followUp.tieneAbogadoQuerellante || "ns_nc",
+            abogado_usina_amicus: formData.followUp.abogadoUsinaAmicus || null,
+            abogado_amicus_firmante: formData.followUp.abogadoAmicusFirmante || null,
+            lista_miembros_asignados: formData.followUp.listaMiembrosAsignados || null,
+            lista_contactos_familiares: formData.followUp.listaContactosFamiliares || null,
+            datos_abogados_querellantes: formData.followUp.datosAbogadosQuerellantes || null,
+          }
+
+          if (existingSeguimiento?.id) {
+            const { error: followUpError } = await supabase
+              .from("seguimiento")
+              .update(seguimientoData)
+              .eq("id", existingSeguimiento.id)
+            if (followUpError) throw followUpError
+          } else {
+            const { error: followUpError } = await supabase.from("seguimiento").insert([seguimientoData])
+            if (followUpError) throw followUpError
+          }
         }
 
         if (formData.resources && Array.isArray(formData.resources) && formData.resources.length > 0) {
@@ -703,6 +838,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 .single()
 
               if (accusedError) throw accusedError
+              const accusedId = accusedData.id
 
               // Insert trial dates
               if (accused.trialDates && Array.isArray(accused.trialDates)) {
@@ -710,7 +846,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                   if (fecha) {
                     await supabase.from("fechas_juicio").insert([
                       {
-                        imputado_id: accusedData.id,
+                        imputado_id: accusedId,
                         fecha_audiencia: fecha,
                         hecho_id: hechoId,
                       },
@@ -725,7 +861,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                   if (instancia.numeroCausa || instancia.fiscalFiscalia || instancia.caratula) {
                     await supabase.from("instancias_judiciales").insert([
                       {
-                        imputado_id: accusedData.id,
+                        imputado_id: accusedId,
                         hecho_id: hechoId,
                         numero_causa: instancia.numeroCausa || null,
                         fiscal_fiscalia: instancia.fiscalFiscalia || null,
@@ -743,7 +879,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                   if (resource.titulo || resource.url || resource.archivo_path) {
                     await supabase.from("recursos").insert([
                       {
-                        imputado_id: accusedData.id,
+                        imputado_id: accusedId,
                         hecho_id: hechoId,
                         tipo: resource.tipo || null,
                         titulo: resource.titulo || null,
