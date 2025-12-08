@@ -29,6 +29,7 @@ import {
   Mic,
   Share2,
   Paperclip,
+  Eye,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -44,6 +45,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { createClient } from "@/lib/supabase/client"
+import { FilePreviewDialog } from "@/components/ui/file-preview-dialog"
 
 interface CaseDetailContentProps {
   caseId: string
@@ -220,7 +222,26 @@ interface ResourceViewerProps {
 }
 
 function ResourceViewer({ recursos, getFileUrl, title = "Recursos Adjuntos" }: ResourceViewerProps) {
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewData, setPreviewData] = useState<{
+    url: string
+    tipo: string
+    titulo: string
+    archivoTipo?: string
+  } | null>(null)
+
   if (recursos.length === 0) return null
+
+  const handlePreview = (recurso: Recurso) => {
+    const url = recurso.archivo_path ? getFileUrl(recurso.archivo_path) : recurso.url || ""
+    setPreviewData({
+      url,
+      tipo: recurso.tipo || "",
+      titulo: recurso.titulo || recurso.archivo_nombre || "Sin título",
+      archivoTipo: recurso.archivo_tipo,
+    })
+    setPreviewOpen(true)
+  }
 
   return (
     <div className="mt-4 pt-4 border-t border-slate-100">
@@ -238,9 +259,12 @@ function ResourceViewer({ recursos, getFileUrl, title = "Recursos Adjuntos" }: R
               {getResourceTypeIcon(recurso.tipo, recurso.archivo_tipo)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-slate-900 text-sm truncate">
+              <button
+                onClick={() => handlePreview(recurso)}
+                className="font-medium text-slate-900 text-sm truncate hover:text-blue-600 hover:underline text-left"
+              >
                 {recurso.titulo || recurso.archivo_nombre || "Sin título"}
-              </p>
+              </button>
               <div className="flex items-center gap-2 mt-1">
                 {recurso.tipo && (
                   <Badge variant="outline" className="text-xs">
@@ -250,30 +274,55 @@ function ResourceViewer({ recursos, getFileUrl, title = "Recursos Adjuntos" }: R
                 {recurso.fuente && <span className="text-xs text-slate-500">Fuente: {recurso.fuente}</span>}
               </div>
             </div>
-            {recurso.archivo_path ? (
-              <a
-                href={getFileUrl(recurso.archivo_path)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors shrink-0"
+            <div className="flex items-center gap-1 shrink-0">
+              {/* Botón Ver/Preview */}
+              <button
+                onClick={() => handlePreview(recurso)}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors"
+                title="Ver archivo"
               >
-                <Download className="w-3 h-3" />
-                Descargar
-              </a>
-            ) : recurso.url ? (
-              <a
-                href={recurso.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-3 py-1.5 bg-slate-600 text-white text-xs font-medium rounded-md hover:bg-slate-700 transition-colors shrink-0"
-              >
-                <ExternalLink className="w-3 h-3" />
+                <Eye className="w-3 h-3" />
                 Ver
-              </a>
-            ) : null}
+              </button>
+              {/* Botón Descargar */}
+              {recurso.archivo_path ? (
+                <a
+                  href={getFileUrl(recurso.archivo_path)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-200 text-slate-700 text-xs font-medium rounded-md hover:bg-slate-300 transition-colors"
+                  title="Descargar"
+                >
+                  <Download className="w-3 h-3" />
+                </a>
+              ) : recurso.url ? (
+                <a
+                  href={recurso.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-200 text-slate-700 text-xs font-medium rounded-md hover:bg-slate-300 transition-colors"
+                  title="Abrir enlace externo"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              ) : null}
+            </div>
           </div>
         ))}
       </div>
+
+      {/* Modal de preview */}
+      {previewData && (
+        <FilePreviewDialog
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          url={previewData.url}
+          tipo={previewData.tipo}
+          titulo={previewData.titulo}
+          archivoTipo={previewData.archivoTipo}
+        />
+      )}
     </div>
   )
 }
