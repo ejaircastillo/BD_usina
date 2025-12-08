@@ -58,7 +58,6 @@
     "lucide-react": "^0.454.0",
     "next": "latest",
     "next-themes": "latest",
-    "npm:resend": "latest",
     "react": "^19.0.0",
     "react-day-picker": "9.8.0",
     "react-dom": "^19.0.0",
