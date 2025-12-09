@@ -24,7 +24,7 @@ import {
   Gavel,
 } from "lucide-react"
 import { FileUpload } from "@/components/ui/file-upload"
-import { getFileUrl, formatFileSize } from "@/lib/supabase/storage"
+import { getPublicFileUrl, formatFileSize } from "@/lib/supabase/storage"
 
 interface SavedResource {
   id: string
@@ -167,7 +167,7 @@ export function ResourcesForm({ data = [], onChange, savedResources = [] }: Reso
 
   const handleDownload = (resource: SavedResource) => {
     if (resource.archivo_path) {
-      const url = getFileUrl(resource.archivo_path)
+      const url = getPublicFileUrl(resource.archivo_path)
       window.open(url, "_blank")
     } else if (resource.url) {
       window.open(resource.url, "_blank")

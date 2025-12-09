@@ -243,7 +243,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         ? seguimientoData.lista_contactos_familiares
         : []
       const listaAbogados = Array.isArray(seguimientoData?.datos_abogados_querellantes)
-        ? seguimientoData.lista_contactos_familiares
+        ? seguimientoData.datos_abogados_querellantes
         : []
 
       // Fetch victim resources
@@ -547,7 +547,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               }
 
               if (accused.resources && Array.isArray(accused.resources)) {
-                console.log("[v0] Imputado resources for", accused.apellidoNombre, ":", accused.resources)
                 const newResources = accused.resources.filter((r: any) => {
                   // Resource is NEW if it has no id, or has a temp id, or has isNew flag
                   const hasNoId = !r.id || r.id === ""
@@ -558,45 +557,25 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                   const hasRealUUID =
                     typeof r.id === "string" && r.id.length === 36 && r.id.includes("-") && !r.id.startsWith("temp-")
 
-                  console.log("[v0] Imputado resource filter check:", {
-                    id: r.id,
-                    hasNoId,
-                    hasTempId,
-                    hasNumericId,
-                    hasNewFlag,
-                    hasRealUUID,
-                    willInsert: !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag),
-                  })
                   return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
                 })
-                console.log("[v0] Filtered new imputado resources:", newResources)
                 for (const resource of newResources) {
                   if (resource.titulo || resource.url || resource.archivo_path) {
-                    console.log("[v0] Inserting imputado resource:", resource, "with imputado_id:", accusedId)
-                    const { data: insertedImpResource, error: impResourceError } = await supabase
-                      .from("recursos")
-                      .insert([
-                        {
-                          imputado_id: accusedId,
-                          hecho_id: hechoId,
-                          tipo: resource.tipo || null,
-                          titulo: resource.titulo || null,
-                          url: resource.url || null,
-                          fuente: resource.fuente || null,
-                          descripcion: resource.descripcion || null,
-                          archivo_path: resource.archivo_path || null,
-                          archivo_nombre: resource.archivo_nombre || null,
-                          archivo_tipo: resource.archivo_tipo || null,
-                          archivo_size: resource.archivo_size || null,
-                        },
-                      ])
-                      .select()
-                    console.log(
-                      "[v0] Insert imputado resource result - data:",
-                      insertedImpResource,
-                      "error:",
-                      impResourceError,
-                    )
+                    await supabase.from("recursos").insert([
+                      {
+                        imputado_id: accusedId,
+                        hecho_id: hechoId,
+                        tipo: resource.tipo || null,
+                        titulo: resource.titulo || null,
+                        url: resource.url || null,
+                        fuente: resource.fuente || null,
+                        descripcion: resource.descripcion || null,
+                        archivo_path: resource.archivo_path || null,
+                        archivo_nombre: resource.archivo_nombre || null,
+                        archivo_tipo: resource.archivo_tipo || null,
+                        archivo_size: resource.archivo_size || null,
+                      },
+                    ])
                   }
                 }
               }
@@ -717,7 +696,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
         // Insert general resources for the fact
         if (formData.resources && Array.isArray(formData.resources) && formData.resources.length > 0) {
-          console.log("[v0] General resources from formData:", formData.resources)
           const newResources = formData.resources.filter((r: any) => {
             const hasNoId = !r.id || r.id === ""
             const hasTempId = typeof r.id === "string" && r.id.startsWith("temp-")
@@ -726,47 +704,30 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             const hasRealUUID =
               typeof r.id === "string" && r.id.length === 36 && r.id.includes("-") && !r.id.startsWith("temp-")
 
-            console.log("[v0] Resource filter check:", {
-              id: r.id,
-              hasNoId,
-              hasTempId,
-              hasNumericId,
-              hasNewFlag,
-              hasRealUUID,
-              willInsert: !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag),
-            })
             return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
           })
-          console.log("[v0] Filtered new general resources:", newResources)
           for (const resource of newResources) {
             if (resource.titulo || resource.url || resource.archivo_path) {
-              console.log("[v0] Inserting general resource:", resource)
-              const { data: insertedResource, error: resourceError } = await supabase
-                .from("recursos")
-                .insert([
-                  {
-                    hecho_id: hechoId,
-                    tipo: resource.tipo || null,
-                    titulo: resource.titulo || null,
-                    url: resource.url || null,
-                    fuente: resource.fuente || null,
-                    descripcion: resource.descripcion || null,
-                    archivo_path: resource.archivo_path || null,
-                    archivo_nombre: resource.archivo_nombre || null,
-                    archivo_tipo: resource.archivo_tipo || null,
-                    archivo_size: resource.archivo_size || null,
-                  },
-                ])
-                .select()
-              console.log("[v0] Insert result - data:", insertedResource, "error:", resourceError)
+              await supabase.from("recursos").insert([
+                {
+                  hecho_id: hechoId,
+                  tipo: resource.tipo || null,
+                  titulo: resource.titulo || null,
+                  url: resource.url || null,
+                  fuente: resource.fuente || null,
+                  descripcion: resource.descripcion || null,
+                  archivo_path: resource.archivo_path || null,
+                  archivo_nombre: resource.archivo_nombre || null,
+                  archivo_tipo: resource.archivo_tipo || null,
+                  archivo_size: resource.archivo_size || null,
+                },
+              ])
             }
           }
         }
 
         // Insert victim resources
-        console.log("[v0] Victim data for resources:", { victimId, victimResources: victim.resources })
         if (victim.resources && Array.isArray(victim.resources) && victim.resources.length > 0) {
-          console.log("[v0] Victim resources from form:", victim.resources)
           const newVictimResources = victim.resources.filter((r: any) => {
             const hasNoId = !r.id || r.id === ""
             const hasTempId = typeof r.id === "string" && r.id.startsWith("temp-")
@@ -775,52 +736,25 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             const hasRealUUID =
               typeof r.id === "string" && r.id.length === 36 && r.id.includes("-") && !r.id.startsWith("temp-")
 
-            console.log("[v0] Victim resource filter check:", {
-              id: r.id,
-              hasNoId,
-              hasTempId,
-              hasNumericId,
-              hasNewFlag,
-              hasRealUUID,
-              willInsert: !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag),
-            })
             return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
           })
-          console.log("[v0] Filtered new victim resources:", newVictimResources)
           for (const resource of newVictimResources) {
             if (resource.titulo || resource.url || resource.archivo_path) {
-              console.log(
-                "[v0] Inserting victim resource:",
-                resource,
-                "with victima_id:",
-                victimId,
-                "hecho_id:",
-                hechoId,
-              )
-              const { data: insertedVictimResource, error: victimResourceError } = await supabase
-                .from("recursos")
-                .insert([
-                  {
-                    victima_id: victimId!,
-                    hecho_id: hechoId,
-                    tipo: resource.tipo || null,
-                    titulo: resource.titulo || null,
-                    url: resource.url || null,
-                    fuente: resource.fuente || null,
-                    descripcion: resource.descripcion || null,
-                    archivo_path: resource.archivo_path || null,
-                    archivo_nombre: resource.archivo_nombre || null,
-                    archivo_tipo: resource.archivo_tipo || null,
-                    archivo_size: resource.archivo_size || null,
-                  },
-                ])
-                .select()
-              console.log(
-                "[v0] Insert victim resource result - data:",
-                insertedVictimResource,
-                "error:",
-                victimResourceError,
-              )
+              await supabase.from("recursos").insert([
+                {
+                  victima_id: victimId!,
+                  hecho_id: hechoId,
+                  tipo: resource.tipo || null,
+                  titulo: resource.titulo || null,
+                  url: resource.url || null,
+                  fuente: resource.fuente || null,
+                  descripcion: resource.descripcion || null,
+                  archivo_path: resource.archivo_path || null,
+                  archivo_nombre: resource.archivo_nombre || null,
+                  archivo_tipo: resource.archivo_tipo || null,
+                  archivo_size: resource.archivo_size || null,
+                },
+              ])
             }
           }
         }
