@@ -18,6 +18,14 @@ export function VictimForm({ data, onChange, showDates = false }: VictimFormProp
   const { countries, isLoading: isLoadingCountries } = useCountries()
   const { provincias, municipios, isLoadingProvincias, isLoadingMunicipios, fetchMunicipios } = useArgentinaGeo()
 
+  console.log("[v0] VictimForm received data:", {
+    nombreCompleto: data.nombreCompleto,
+    notasAdicionales: data.notasAdicionales,
+    provinciaResidencia: data.provinciaResidencia,
+    municipioResidencia: data.municipioResidencia,
+    fullData: data,
+  })
+
   const handleChange = (field: string, value: string) => {
     onChange({
       ...data,

@@ -161,6 +161,15 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 .eq("victima_id", v.id)
                 .is("imputado_id", null)
 
+              console.log("[v0] Victim data from DB:", {
+                id: v.id,
+                nombre_completo: v.nombre_completo,
+                notas_adicionales: v.notas_adicionales,
+                provincia_residencia: v.provincia_residencia,
+                municipio_residencia: v.municipio_residencia,
+                rawData: v,
+              })
+
               return {
                 id: v.id,
                 casoId: caso?.id || null,
