@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Save, X, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, Save, X, Plus, Trash2, Users } from "lucide-react"
 import Link from "next/link"
 import { VictimForm } from "./forms/victim-form"
 import { IncidentForm } from "./forms/incident-form"
@@ -14,6 +14,7 @@ import { FollowUpForm } from "./forms/follow-up-form"
 import { ResourcesForm } from "./forms/resources-form"
 import { useToast } from "@/hooks/use-toast"
 import { createClient } from "@/lib/supabase/client"
+import { Badge } from "@/components/ui/badge"
 
 interface CaseFormProps {
   mode: "create" | "edit"
@@ -21,6 +22,8 @@ interface CaseFormProps {
 }
 
 const getEmptyVictimData = () => ({
+  id: null as string | null,
+  casoId: null as string | null,
   nombreCompleto: "",
   fechaNacimiento: "",
   edad: "",
@@ -57,7 +60,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
     accused: [],
     followUp: {},
     resources: [],
-    victimResources: [], // Added to store victim-specific resources
+    victimResources: [],
   })
 
   const [realIds, setRealIds] = useState<{
@@ -129,14 +132,111 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
       setRealIds({ victimaId, hechoId, casoId })
 
-      const { data: victimData, error: victimError } = await supabase
-        .from("victimas")
-        .select("*")
-        .eq("id", victimaId)
-        .single()
+      let allVictims: any[] = []
 
-      if (victimError || !victimData) {
-        throw new Error("Error al cargar datos de la víctima")
+      if (hechoId) {
+        // Get all casos linked to this hecho
+        const { data: allCasosForHecho } = await supabase.from("casos").select("id, victima_id").eq("hecho_id", hechoId)
+
+        if (allCasosForHecho && allCasosForHecho.length > 0) {
+          // Fetch all victims data
+          const victimIds = allCasosForHecho.map((c) => c.victima_id).filter(Boolean)
+          const { data: victimsData } = await supabase.from("victimas").select("*").in("id", victimIds)
+
+          // Map victims with their caso_id
+          allVictims = await Promise.all(
+            (victimsData || []).map(async (v: any) => {
+              const caso = allCasosForHecho.find((c) => c.victima_id === v.id)
+
+              // Fetch victim resources
+              const { data: victimResources } = await supabase
+                .from("recursos")
+                .select("*")
+                .eq("victima_id", v.id)
+                .is("imputado_id", null)
+
+              return {
+                id: v.id,
+                casoId: caso?.id || null,
+                nombreCompleto: v.nombre_completo || "",
+                fechaNacimiento: v.fecha_nacimiento || "",
+                edad: v.edad?.toString() || "",
+                profesion: v.profesion || "",
+                redesSociales: v.redes_sociales || "",
+                nacionalidad: v.nacionalidad || "",
+                notasAdicionales: v.notas_adicionales || "",
+                provinciaResidencia: v.provincia_residencia || "",
+                municipioResidencia: v.municipio_residencia || "",
+                fechaHecho: v.fecha_hecho || "",
+                fechaFallecimiento: v.fecha_fallecimiento || "",
+                resources: (victimResources || []).map((r: any) => ({
+                  id: r.id,
+                  tipo: r.tipo || "",
+                  titulo: r.titulo || "",
+                  url: r.url || "",
+                  fuente: r.fuente || "",
+                  descripcion: r.descripcion || "",
+                  archivo_path: r.archivo_path,
+                  archivo_nombre: r.archivo_nombre,
+                  archivo_tipo: r.archivo_tipo,
+                  archivo_size: r.archivo_size,
+                  input_mode: r.archivo_path ? "file" : "url",
+                })),
+              }
+            }),
+          )
+        }
+      }
+
+      // If no victims found through casos, fallback to the single victim
+      if (allVictims.length === 0) {
+        const { data: victimData, error: victimError } = await supabase
+          .from("victimas")
+          .select("*")
+          .eq("id", victimaId)
+          .single()
+
+        if (victimError || !victimData) {
+          throw new Error("Error al cargar datos de la víctima")
+        }
+
+        // Fetch victim resources
+        const { data: victimResources } = await supabase
+          .from("recursos")
+          .select("*")
+          .eq("victima_id", victimaId)
+          .is("imputado_id", null)
+
+        allVictims = [
+          {
+            id: victimData.id,
+            casoId: casoId,
+            nombreCompleto: victimData.nombre_completo || "",
+            fechaNacimiento: victimData.fecha_nacimiento || "",
+            edad: victimData.edad?.toString() || "",
+            profesion: victimData.profesion || "",
+            redesSociales: victimData.redes_sociales || "",
+            nacionalidad: victimData.nacionalidad || "",
+            notasAdicionales: victimData.notas_adicionales || "",
+            provinciaResidencia: victimData.provincia_residencia || "",
+            municipioResidencia: victimData.municipio_residencia || "",
+            fechaHecho: victimData.fecha_hecho || "",
+            fechaFallecimiento: victimData.fecha_fallecimiento || "",
+            resources: (victimResources || []).map((r: any) => ({
+              id: r.id,
+              tipo: r.tipo || "",
+              titulo: r.titulo || "",
+              url: r.url || "",
+              fuente: r.fuente || "",
+              descripcion: r.descripcion || "",
+              archivo_path: r.archivo_path,
+              archivo_nombre: r.archivo_nombre,
+              archivo_tipo: r.archivo_tipo,
+              archivo_size: r.archivo_size,
+              input_mode: r.archivo_path ? "file" : "url",
+            })),
+          },
+        ]
       }
 
       // Fetch hecho data
@@ -246,47 +346,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         ? seguimientoData.lista_contactos_familiares
         : []
 
-      // Fetch victim resources
-      let victimResources: any[] = []
-      if (victimaId) {
-        const { data } = await supabase
-          .from("recursos")
-          .select("*")
-          .eq("victima_id", victimaId)
-          .is("hecho_id", null)
-          .is("imputado_id", null)
-        victimResources = data || []
-      }
-
       setFormData({
-        victims: [
-          {
-            nombreCompleto: victimData?.nombre_completo || "",
-            fechaNacimiento: victimData?.fecha_nacimiento || "",
-            edad: victimData?.edad || "",
-            profesion: victimData?.profesion || "",
-            redesSociales: victimData?.redes_sociales || "",
-            nacionalidad: victimData?.nacionalidad || "",
-            notasAdicionales: victimData?.notas_adicionales || "",
-            provinciaResidencia: victimData?.provincia_residencia || "",
-            municipioResidencia: victimData?.municipio_residencia || "",
-            fechaHecho: victimData?.fecha_hecho || "",
-            fechaFallecimiento: victimData?.fecha_fallecimiento || "",
-            resources: victimResources.map((r: any) => ({
-              id: r.id,
-              tipo: r.tipo || "",
-              titulo: r.titulo || "",
-              url: r.url || "",
-              fuente: r.fuente || "",
-              descripcion: r.descripcion || "",
-              archivo_path: r.archivo_path,
-              archivo_nombre: r.archivo_nombre,
-              archivo_tipo: r.archivo_tipo,
-              archivo_size: r.archivo_size,
-              input_mode: r.archivo_path ? "file" : "url",
-            })),
-          },
-        ],
+        victims: allVictims,
         incident: {
           provincia: hechoData?.provincia || "",
           municipio: hechoData?.municipio || "",
@@ -399,28 +460,120 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
     try {
       if (mode === "edit" && caseId) {
-        const victim = formData.victims[0]
-        const victimId = realIds.victimaId
         const hechoId = realIds.hechoId
 
-        const { error: victimError } = await supabase
-          .from("victimas")
-          .update({
-            nombre_completo: victim.nombreCompleto || null,
-            fecha_nacimiento: victim.fechaNacimiento || null,
-            edad: victim.edad ? Number.parseInt(victim.edad) : null,
-            profesion: victim.profesion || null,
-            redes_sociales: victim.redesSociales || null,
-            nacionalidad: victim.nacionalidad || null,
-            notas_adicionales: victim.notasAdicionales || null,
-            provincia_residencia: victim.provinciaResidencia || null,
-            municipio_residencia: victim.municipioResidencia || null,
-            fecha_hecho: victim.fechaHecho || null,
-            fecha_fallecimiento: victim.fechaFallecimiento || null,
-          })
-          .eq("id", victimId!)
+        for (const victim of formData.victims) {
+          if (victim.id) {
+            // Update existing victim
+            const { error: victimError } = await supabase
+              .from("victimas")
+              .update({
+                nombre_completo: victim.nombreCompleto || null,
+                fecha_nacimiento: victim.fechaNacimiento || null,
+                edad: victim.edad ? Number.parseInt(victim.edad) : null,
+                profesion: victim.profesion || null,
+                redes_sociales: victim.redesSociales || null,
+                nacionalidad: victim.nacionalidad || null,
+                notas_adicionales: victim.notasAdicionales || null,
+                provincia_residencia: victim.provinciaResidencia || null,
+                municipio_residencia: victim.municipioResidencia || null,
+                fecha_hecho: victim.fechaHecho || null,
+                fecha_fallecimiento: victim.fechaFallecimiento || null,
+              })
+              .eq("id", victim.id)
 
-        if (victimError) throw victimError
+            if (victimError) throw victimError
+
+            // Update victim resources
+            if (victim.resources && Array.isArray(victim.resources) && victim.resources.length > 0) {
+              const newVictimResources = victim.resources.filter((r: any) => {
+                const hasNoId = !r.id || r.id === ""
+                const hasTempId = typeof r.id === "string" && r.id.startsWith("temp-")
+                const hasNumericId = typeof r.id === "number"
+                const hasNewFlag = r.isNew === true
+                const hasRealUUID =
+                  typeof r.id === "string" && r.id.length === 36 && r.id.includes("-") && !r.id.startsWith("temp-")
+
+                return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
+              })
+
+              for (const resource of newVictimResources) {
+                if (resource.titulo || resource.url || resource.archivo_path) {
+                  const resourceData = {
+                    victima_id: victim.id,
+                    hecho_id: hechoId,
+                    tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
+                    titulo: resource.titulo || null,
+                    url: resource.url || null,
+                    fuente: resource.fuente || null,
+                    descripcion: resource.descripcion || null,
+                    archivo_path: resource.archivo_path || null,
+                    archivo_nombre: resource.archivo_nombre || null,
+                    archivo_tipo: resource.archivo_tipo || null,
+                    archivo_size: resource.archivo_size ? Number(resource.archivo_size) : null,
+                  }
+                  const { error: resourceError } = await supabase.from("recursos").insert([resourceData])
+                  if (resourceError) throw resourceError
+                }
+              }
+            }
+          } else {
+            const { data: newVictimData, error: victimInsertError } = await supabase
+              .from("victimas")
+              .insert([
+                {
+                  nombre_completo: victim.nombreCompleto || null,
+                  fecha_nacimiento: victim.fechaNacimiento || null,
+                  edad: victim.edad ? Number.parseInt(victim.edad) : null,
+                  profesion: victim.profesion || null,
+                  redes_sociales: victim.redesSociales || null,
+                  nacionalidad: victim.nacionalidad || null,
+                  notas_adicionales: victim.notasAdicionales || null,
+                  provincia_residencia: victim.provinciaResidencia || null,
+                  municipio_residencia: victim.municipioResidencia || null,
+                  fecha_hecho: victim.fechaHecho || null,
+                  fecha_fallecimiento: victim.fechaFallecimiento || null,
+                },
+              ])
+              .select()
+              .single()
+
+            if (victimInsertError) throw victimInsertError
+
+            // Create caso for new victim
+            const { error: casoInsertError } = await supabase.from("casos").insert([
+              {
+                victima_id: newVictimData.id,
+                hecho_id: hechoId,
+                estado_general: "En investigación",
+              },
+            ])
+            if (casoInsertError) throw casoInsertError
+
+            // Insert victim resources
+            if (victim.resources && Array.isArray(victim.resources) && victim.resources.length > 0) {
+              for (const resource of victim.resources) {
+                if (resource.titulo || resource.url || resource.archivo_path) {
+                  await supabase.from("recursos").insert([
+                    {
+                      victima_id: newVictimData.id,
+                      hecho_id: hechoId,
+                      tipo: resource.tipo || null,
+                      titulo: resource.titulo || null,
+                      url: resource.url || null,
+                      fuente: resource.fuente || null,
+                      descripcion: resource.descripcion || null,
+                      archivo_path: resource.archivo_path || null,
+                      archivo_nombre: resource.archivo_nombre || null,
+                      archivo_tipo: resource.archivo_tipo || null,
+                      archivo_size: resource.archivo_size ? Number(resource.archivo_size) : null,
+                    },
+                  ])
+                }
+              }
+            }
+          }
+        }
 
         const { error: incidentError } = await supabase
           .from("hechos")
@@ -548,12 +701,10 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
               if (accused.resources && Array.isArray(accused.resources)) {
                 const newResources = accused.resources.filter((r: any) => {
-                  // Resource is NEW if it has no id, or has a temp id, or has isNew flag
                   const hasNoId = !r.id || r.id === ""
                   const hasTempId = typeof r.id === "string" && r.id.startsWith("temp-")
                   const hasNumericId = typeof r.id === "number"
                   const hasNewFlag = r.isNew === true
-                  // A real UUID is a 36-character string with dashes (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
                   const hasRealUUID =
                     typeof r.id === "string" && r.id.length === 36 && r.id.includes("-") && !r.id.startsWith("temp-")
 
@@ -696,7 +847,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
         // Insert general resources for the fact
         if (formData.resources && Array.isArray(formData.resources) && formData.resources.length > 0) {
-          console.log("[v0] General resources to process:", formData.resources)
           const newResources = formData.resources.filter((r: any) => {
             const hasNoId = !r.id || r.id === ""
             const hasTempId = typeof r.id === "string" && r.id.startsWith("temp-")
@@ -707,7 +857,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
             return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
           })
-          console.log("[v0] Filtered new general resources:", newResources)
           for (const resource of newResources) {
             if (resource.titulo || resource.url || resource.archivo_path) {
               const resourceData = {
@@ -722,53 +871,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 archivo_tipo: resource.archivo_tipo || null,
                 archivo_size: resource.archivo_size ? Number(resource.archivo_size) : null,
               }
-              console.log("[v0] Inserting general resource:", resourceData)
               const { error: resourceError } = await supabase.from("recursos").insert([resourceData])
-              if (resourceError) {
-                console.error("[v0] Error inserting general resource:", resourceError)
-                throw resourceError
-              }
-              console.log("[v0] General resource inserted successfully")
-            }
-          }
-        }
-
-        // Insert victim resources
-        if (victim.resources && Array.isArray(victim.resources) && victim.resources.length > 0) {
-          console.log("[v0] Victim resources to process:", victim.resources)
-          const newVictimResources = victim.resources.filter((r: any) => {
-            const hasNoId = !r.id || r.id === ""
-            const hasTempId = typeof r.id === "string" && r.id.startsWith("temp-")
-            const hasNumericId = typeof r.id === "number"
-            const hasNewFlag = r.isNew === true
-            const hasRealUUID =
-              typeof r.id === "string" && r.id.length === 36 && r.id.includes("-") && !r.id.startsWith("temp-")
-
-            return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
-          })
-          console.log("[v0] Filtered new victim resources:", newVictimResources)
-          for (const resource of newVictimResources) {
-            if (resource.titulo || resource.url || resource.archivo_path) {
-              const resourceData = {
-                victima_id: victimId!,
-                hecho_id: hechoId,
-                tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                titulo: resource.titulo || null,
-                url: resource.url || null,
-                fuente: resource.fuente || null,
-                descripcion: resource.descripcion || null,
-                archivo_path: resource.archivo_path || null,
-                archivo_nombre: resource.archivo_nombre || null,
-                archivo_tipo: resource.archivo_tipo || null,
-                archivo_size: resource.archivo_size ? Number(resource.archivo_size) : null,
-              }
-              console.log("[v0] Inserting victim resource:", resourceData)
-              const { error: resourceError } = await supabase.from("recursos").insert([resourceData])
-              if (resourceError) {
-                console.error("[v0] Error inserting victim resource:", resourceError)
-                throw resourceError
-              }
-              console.log("[v0] Victim resource inserted successfully")
+              if (resourceError) throw resourceError
             }
           }
         }
@@ -781,7 +885,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           .from("hechos")
           .insert([
             {
-              victima_id: null, // Will be updated with the first victim's ID
+              victima_id: null,
               fecha_hecho: firstVictim.fechaHecho || null,
               fecha_fallecimiento: firstVictim.fechaFallecimiento || null,
               provincia: formData.incident.provincia || null,
@@ -1070,21 +1174,44 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4 mb-6">
-              <TabsTrigger value="victim">Víctimas ({formData.victims.length})</TabsTrigger>
+              <TabsTrigger value="victim" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Víctimas ({formData.victims.length})
+              </TabsTrigger>
               <TabsTrigger value="incident">Hecho</TabsTrigger>
               <TabsTrigger value="accused">Imputados</TabsTrigger>
               <TabsTrigger value="followup">Seguimiento</TabsTrigger>
             </TabsList>
 
             <TabsContent value="victim" className="space-y-6">
+              {formData.victims.length > 1 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+                  <Users className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-blue-900">Caso con múltiples víctimas</h4>
+                    <p className="text-sm text-blue-700 mt-1">
+                      Este hecho tiene {formData.victims.length} víctimas registradas. Todas comparten el mismo hecho,
+                      imputados y seguimiento, pero cada una tiene su propia ficha individual.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="max-w-4xl mx-auto space-y-6">
                 {formData.victims.map((victim, index) => (
-                  <Card key={index} className="border-slate-200">
+                  <Card key={victim.id || index} className="border-slate-200">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 bg-slate-50">
-                      <CardTitle className="text-base font-heading">
-                        Víctima #{index + 1}
-                        {victim.nombreCompleto && ` - ${victim.nombreCompleto}`}
-                      </CardTitle>
+                      <div className="flex items-center gap-3">
+                        <CardTitle className="text-base font-heading">
+                          Víctima #{index + 1}
+                          {victim.nombreCompleto && ` - ${victim.nombreCompleto}`}
+                        </CardTitle>
+                        {mode === "edit" && (
+                          <Badge variant={victim.id ? "outline" : "default"} className="text-xs">
+                            {victim.id ? "Guardada" : "Nueva"}
+                          </Badge>
+                        )}
+                      </div>
                       {formData.victims.length > 1 && (
                         <Button
                           variant="outline"
@@ -1097,7 +1224,11 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                       )}
                     </CardHeader>
                     <CardContent className="pt-4 space-y-6">
-                      <VictimForm data={victim} onChange={(data) => updateVictim(index, data)} showDates={true} />
+                      <VictimForm
+                        data={victim}
+                        onChange={(data) => updateVictim(index, { ...victim, ...data })}
+                        showDates={true}
+                      />
                       <div className="border-t pt-6">
                         <h4 className="text-md font-semibold text-slate-900 font-heading mb-2">
                           Recursos de la Víctima

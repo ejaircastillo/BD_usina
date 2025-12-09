@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, User, Loader2, ChevronLeft, ChevronRight, ArrowLeft, Phone } from "lucide-react"
+import { MapPin, User, Loader2, ChevronLeft, ChevronRight, ArrowLeft, Phone, Users } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { CasesFilters } from "@/components/cases/cases-filters"
 
@@ -19,6 +19,8 @@ interface CaseData {
   familyContactName: string
   familyRelationship: string
   familyContactPhone: string
+  hechoId: string
+  totalVictimsInHecho: number
 }
 
 const getStatusColor = (status: string) => {
@@ -60,7 +62,15 @@ function CaseCard({ case: caseData }: CaseCardProps) {
               <h3 className="font-semibold text-lg text-slate-900 font-heading mb-2 line-clamp-2">
                 {caseData.victimName}
               </h3>
-              <Badge className={`text-xs ${getStatusColor(caseData.status)}`}>{caseData.status}</Badge>
+              <div className="flex flex-wrap gap-2">
+                <Badge className={`text-xs ${getStatusColor(caseData.status)}`}>{caseData.status}</Badge>
+                {caseData.totalVictimsInHecho > 1 && (
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    <Users className="w-3 h-3" />
+                    {caseData.totalVictimsInHecho} víctimas
+                  </Badge>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2 text-sm text-slate-600">
@@ -124,52 +134,60 @@ export default function CasosPage() {
       setIsLoading(true)
       setError(null)
 
-      const { data: hechosData, error: hechosError } = await supabase
-        .from("hechos")
+      const { data: casosData, error: casosError } = await supabase
+        .from("casos")
         .select(`
           id,
-          fecha_hecho,
-          municipio,
-          provincia,
+          estado_general,
+          hecho_id,
           victima_id,
           victimas (
             id,
             nombre_completo
+          ),
+          hechos (
+            id,
+            fecha_hecho,
+            municipio,
+            provincia
           )
         `)
         .order("created_at", { ascending: false })
 
-      if (hechosError) throw hechosError
+      if (casosError) throw casosError
+
+      // Group casos by hecho_id to count victims per incident
+      const hechoVictimCounts: Record<string, number> = {}
+      for (const caso of casosData || []) {
+        if (caso.hecho_id) {
+          hechoVictimCounts[caso.hecho_id] = (hechoVictimCounts[caso.hecho_id] || 0) + 1
+        }
+      }
 
       const transformedCases: CaseData[] = await Promise.all(
-        (hechosData || []).map(async (hecho: any) => {
-          const victima = hecho.victimas || {}
-
-          const { data: casoData } = await supabase
-            .from("casos")
-            .select("id, estado_general")
-            .eq("hecho_id", hecho.id)
-            .limit(1)
-
-          const caso = casoData?.[0]
+        (casosData || []).map(async (caso: any) => {
+          const victima = caso.victimas || {}
+          const hecho = caso.hechos || {}
 
           const { data: seguimientoData } = await supabase
             .from("seguimiento")
             .select("contacto_familia, parentesco_contacto, telefono_contacto")
-            .eq("hecho_id", hecho.id)
+            .eq("hecho_id", caso.hecho_id)
             .limit(1)
           const followUp = seguimientoData?.[0] || {}
 
           return {
-            id: caso?.id || victima.id || hecho.id,
+            id: caso.id,
             victimName: victima.nombre_completo || "Sin nombre",
             incidentDate: hecho.fecha_hecho || new Date().toISOString(),
             location: hecho.municipio || "No especificado",
             province: hecho.provincia || "No especificado",
-            status: caso?.estado_general || "En investigación",
+            status: caso.estado_general || "En investigación",
             familyContactName: followUp.contacto_familia || "No especificado",
             familyRelationship: followUp.parentesco_contacto || "",
             familyContactPhone: followUp.telefono_contacto || "No especificado",
+            hechoId: caso.hecho_id,
+            totalVictimsInHecho: caso.hecho_id ? hechoVictimCounts[caso.hecho_id] : 1,
           }
         }),
       )
