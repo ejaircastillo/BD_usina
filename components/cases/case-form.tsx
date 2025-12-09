@@ -546,9 +546,13 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 }
               }
 
+              // Improved filter for new resources
               if (accused.resources && Array.isArray(accused.resources)) {
                 const newResources = accused.resources.filter(
-                  (r: any) => !r.id || typeof r.id !== "string" || r.id.startsWith("temp-"),
+                  (r: any) =>
+                    r.isNew === true ||
+                    (typeof r.id === "string" && r.id.startsWith("temp-")) ||
+                    typeof r.id === "number",
                 )
                 for (const resource of newResources) {
                   if (resource.titulo || resource.url || resource.archivo_path) {
@@ -685,9 +689,11 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         }
 
+        // Insert general resources for the fact
         if (formData.resources && Array.isArray(formData.resources) && formData.resources.length > 0) {
           const newResources = formData.resources.filter(
-            (r: any) => !r.id || typeof r.id !== "string" || r.id.startsWith("temp-"),
+            (r: any) =>
+              r.isNew === true || (typeof r.id === "string" && r.id.startsWith("temp-")) || typeof r.id === "number",
           )
           for (const resource of newResources) {
             if (resource.titulo || resource.url || resource.archivo_path) {
@@ -709,9 +715,11 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         }
 
+        // Insert victim resources
         if (victim.resources && Array.isArray(victim.resources) && victim.resources.length > 0) {
           const newVictimResources = victim.resources.filter(
-            (r: any) => !r.id || typeof r.id !== "string" || r.id.startsWith("temp-"),
+            (r: any) =>
+              r.isNew === true || (typeof r.id === "string" && r.id.startsWith("temp-")) || typeof r.id === "number",
           )
           for (const resource of newVictimResources) {
             if (resource.titulo || resource.url || resource.archivo_path) {
