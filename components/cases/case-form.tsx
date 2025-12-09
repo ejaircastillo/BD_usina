@@ -209,14 +209,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             lugar_otro,
             resumen_hecho,
             tipo_crimen,
-            tipo_arma,
-            arma_otro,
-            context_type,
-            perpetrator_type,
-            perpetrators,
-            perpetrator_details,
-            aggravating_factors,
-            other_aggravating
+            tipo_arma
           )
         `)
         .eq("id", caseId)
