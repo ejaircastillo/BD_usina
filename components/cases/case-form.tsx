@@ -243,7 +243,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         ? seguimientoData.lista_contactos_familiares
         : []
       const listaAbogados = Array.isArray(seguimientoData?.datos_abogados_querellantes)
-        ? seguimientoData.datos_abogados_querellantes
+        ? seguimientoData.lista_contactos_familiares
         : []
 
       // Fetch victim resources
@@ -573,7 +573,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                         archivo_path: resource.archivo_path || null,
                         archivo_nombre: resource.archivo_nombre || null,
                         archivo_tipo: resource.archivo_tipo || null,
-                        archivo_size: resource.archivo_size || null,
+                        archivo_size: resource.archivo_size ? Number(resource.archivo_size) : null,
                       },
                     ])
                   }
@@ -623,7 +623,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                         archivo_path: resource.archivo_path || null,
                         archivo_nombre: resource.archivo_nombre || null,
                         archivo_tipo: resource.archivo_tipo || null,
-                        archivo_size: resource.archivo_size || null,
+                        archivo_size: resource.archivo_size ? Number(resource.archivo_size) : null,
                       },
                     ])
                   }
@@ -696,6 +696,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
         // Insert general resources for the fact
         if (formData.resources && Array.isArray(formData.resources) && formData.resources.length > 0) {
+          console.log("[v0] General resources to process:", formData.resources)
           const newResources = formData.resources.filter((r: any) => {
             const hasNoId = !r.id || r.id === ""
             const hasTempId = typeof r.id === "string" && r.id.startsWith("temp-")
@@ -706,28 +707,35 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
             return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
           })
+          console.log("[v0] Filtered new general resources:", newResources)
           for (const resource of newResources) {
             if (resource.titulo || resource.url || resource.archivo_path) {
-              await supabase.from("recursos").insert([
-                {
-                  hecho_id: hechoId,
-                  tipo: resource.tipo || null,
-                  titulo: resource.titulo || null,
-                  url: resource.url || null,
-                  fuente: resource.fuente || null,
-                  descripcion: resource.descripcion || null,
-                  archivo_path: resource.archivo_path || null,
-                  archivo_nombre: resource.archivo_nombre || null,
-                  archivo_tipo: resource.archivo_tipo || null,
-                  archivo_size: resource.archivo_size || null,
-                },
-              ])
+              const resourceData = {
+                hecho_id: hechoId,
+                tipo: resource.tipo || null,
+                titulo: resource.titulo || null,
+                url: resource.url || null,
+                fuente: resource.fuente || null,
+                descripcion: resource.descripcion || null,
+                archivo_path: resource.archivo_path || null,
+                archivo_nombre: resource.archivo_nombre || null,
+                archivo_tipo: resource.archivo_tipo || null,
+                archivo_size: resource.archivo_size ? Number(resource.archivo_size) : null,
+              }
+              console.log("[v0] Inserting general resource:", resourceData)
+              const { error: resourceError } = await supabase.from("recursos").insert([resourceData])
+              if (resourceError) {
+                console.error("[v0] Error inserting general resource:", resourceError)
+                throw resourceError
+              }
+              console.log("[v0] General resource inserted successfully")
             }
           }
         }
 
         // Insert victim resources
         if (victim.resources && Array.isArray(victim.resources) && victim.resources.length > 0) {
+          console.log("[v0] Victim resources to process:", victim.resources)
           const newVictimResources = victim.resources.filter((r: any) => {
             const hasNoId = !r.id || r.id === ""
             const hasTempId = typeof r.id === "string" && r.id.startsWith("temp-")
@@ -738,23 +746,29 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
             return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
           })
+          console.log("[v0] Filtered new victim resources:", newVictimResources)
           for (const resource of newVictimResources) {
             if (resource.titulo || resource.url || resource.archivo_path) {
-              await supabase.from("recursos").insert([
-                {
-                  victima_id: victimId!,
-                  hecho_id: hechoId,
-                  tipo: resource.tipo || null,
-                  titulo: resource.titulo || null,
-                  url: resource.url || null,
-                  fuente: resource.fuente || null,
-                  descripcion: resource.descripcion || null,
-                  archivo_path: resource.archivo_path || null,
-                  archivo_nombre: resource.archivo_nombre || null,
-                  archivo_tipo: resource.archivo_tipo || null,
-                  archivo_size: resource.archivo_size || null,
-                },
-              ])
+              const resourceData = {
+                victima_id: victimId!,
+                hecho_id: hechoId,
+                tipo: resource.tipo || null,
+                titulo: resource.titulo || null,
+                url: resource.url || null,
+                fuente: resource.fuente || null,
+                descripcion: resource.descripcion || null,
+                archivo_path: resource.archivo_path || null,
+                archivo_nombre: resource.archivo_nombre || null,
+                archivo_tipo: resource.archivo_tipo || null,
+                archivo_size: resource.archivo_size ? Number(resource.archivo_size) : null,
+              }
+              console.log("[v0] Inserting victim resource:", resourceData)
+              const { error: resourceError } = await supabase.from("recursos").insert([resourceData])
+              if (resourceError) {
+                console.error("[v0] Error inserting victim resource:", resourceError)
+                throw resourceError
+              }
+              console.log("[v0] Victim resource inserted successfully")
             }
           }
         }
@@ -844,7 +858,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                     archivo_path: resource.archivo_path || null,
                     archivo_nombre: resource.archivo_nombre || null,
                     archivo_tipo: resource.archivo_tipo || null,
-                    archivo_size: resource.archivo_size || null,
+                    archivo_size: resource.archivo_size ? Number(resource.archivo_size) : null,
                   },
                 ])
               }
@@ -914,7 +928,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                         archivo_path: resource.archivo_path || null,
                         archivo_nombre: resource.archivo_nombre || null,
                         archivo_tipo: resource.archivo_tipo || null,
-                        archivo_size: resource.archivo_size || null,
+                        archivo_size: resource.archivo_size ? Number(resource.archivo_size) : null,
                       },
                     ])
                   }
@@ -972,7 +986,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                   archivo_path: resource.archivo_path || null,
                   archivo_nombre: resource.archivo_nombre || null,
                   archivo_tipo: resource.archivo_tipo || null,
-                  archivo_size: resource.archivo_size || null,
+                  archivo_size: resource.archivo_size ? Number(resource.archivo_size) : null,
                 },
               ])
             }
