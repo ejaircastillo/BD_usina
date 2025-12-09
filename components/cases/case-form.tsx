@@ -712,7 +712,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             if (resource.titulo || resource.url || resource.archivo_path) {
               const resourceData = {
                 hecho_id: hechoId,
-                tipo: resource.tipo || null,
+                tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
                 titulo: resource.titulo || null,
                 url: resource.url || null,
                 fuente: resource.fuente || null,
@@ -752,7 +752,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               const resourceData = {
                 victima_id: victimId!,
                 hecho_id: hechoId,
-                tipo: resource.tipo || null,
+                tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
                 titulo: resource.titulo || null,
                 url: resource.url || null,
                 fuente: resource.fuente || null,
@@ -975,20 +975,19 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         if (formData.resources && Array.isArray(formData.resources) && formData.resources.length > 0) {
           for (const resource of formData.resources) {
             if (resource.titulo || resource.url || resource.archivo_path) {
-              await supabase.from("recursos").insert([
-                {
-                  hecho_id: hechoId,
-                  tipo: resource.tipo || null,
-                  titulo: resource.titulo || null,
-                  url: resource.url || null,
-                  fuente: resource.fuente || null,
-                  descripcion: resource.descripcion || null,
-                  archivo_path: resource.archivo_path || null,
-                  archivo_nombre: resource.archivo_nombre || null,
-                  archivo_tipo: resource.archivo_tipo || null,
-                  archivo_size: resource.archivo_size ? Number(resource.archivo_size) : null,
-                },
-              ])
+              const resourceData = {
+                hecho_id: hechoId,
+                tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
+                titulo: resource.titulo || null,
+                url: resource.url || null,
+                fuente: resource.fuente || null,
+                descripcion: resource.descripcion || null,
+                archivo_path: resource.archivo_path || null,
+                archivo_nombre: resource.archivo_nombre || null,
+                archivo_tipo: resource.archivo_tipo || null,
+                archivo_size: resource.archivo_size ? Number(resource.archivo_size) : null,
+              }
+              await supabase.from("recursos").insert([resourceData])
             }
           }
         }
