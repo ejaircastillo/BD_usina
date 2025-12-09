@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { MapPin, User, Loader2 } from "lucide-react"
+import { MapPin, User, Loader2, Users } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 interface CaseData {
@@ -16,6 +16,8 @@ interface CaseData {
   status: string
   familyContactName: string
   familyRelationship: string
+  hechoId: string
+  totalVictimsInHecho: number
 }
 
 const getStatusColor = (status: string) => {
@@ -72,6 +74,11 @@ function CaseCard({ case: caseData }: CaseCardProps) {
                   {caseData.familyContactName}
                   {caseData.familyRelationship && ` - ${caseData.familyRelationship}`}
                 </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-blue-600" />
+                <span className="line-clamp-1">{caseData.totalVictimsInHecho} víctimas</span>
               </div>
             </div>
           </div>
@@ -137,52 +144,59 @@ export function AnimatedCasesGrid() {
       setIsLoading(true)
       setError(null)
 
-      const { data: hechosData, error: hechosError } = await supabase
-        .from("hechos")
+      const { data: casosData, error: casosError } = await supabase
+        .from("casos")
         .select(`
           id,
-          fecha_hecho,
-          municipio,
-          provincia,
+          estado_general,
+          hecho_id,
           victima_id,
+          created_at,
           victimas (
             id,
             nombre_completo
+          ),
+          hechos (
+            id,
+            fecha_hecho,
+            municipio,
+            provincia
           )
         `)
         .order("created_at", { ascending: false })
-        .limit(12)
 
-      if (hechosError) throw hechosError
+      if (casosError) throw casosError
+
+      const hechoVictimCounts: Record<string, number> = {}
+      for (const caso of casosData || []) {
+        if (caso.hecho_id) {
+          hechoVictimCounts[caso.hecho_id] = (hechoVictimCounts[caso.hecho_id] || 0) + 1
+        }
+      }
 
       const transformedCases: CaseData[] = await Promise.all(
-        (hechosData || []).map(async (hecho: any) => {
-          const victima = hecho.victimas || {}
-
-          const { data: casoData } = await supabase
-            .from("casos")
-            .select("id, estado_general")
-            .eq("hecho_id", hecho.id)
-            .limit(1)
-
-          const caso = casoData?.[0]
+        (casosData || []).map(async (caso: any) => {
+          const victima = caso.victimas || {}
+          const hecho = caso.hechos || {}
 
           const { data: seguimientoData } = await supabase
             .from("seguimiento")
             .select("contacto_familia, parentesco_contacto")
-            .eq("hecho_id", hecho.id)
+            .eq("hecho_id", caso.hecho_id)
             .limit(1)
           const followUp = seguimientoData?.[0] || {}
 
           return {
-            id: caso?.id || victima.id || hecho.id,
+            id: caso.id,
             victimName: victima.nombre_completo || "Sin nombre",
             incidentDate: hecho.fecha_hecho || new Date().toISOString(),
             location: hecho.municipio || hecho.provincia || "No especificado",
             province: hecho.provincia || "No especificado",
-            status: caso?.estado_general || "En investigación",
+            status: caso.estado_general || "En investigación",
             familyContactName: followUp.contacto_familia || "No especificado",
             familyRelationship: followUp.parentesco_contacto || "Familiar",
+            hechoId: caso.hecho_id,
+            totalVictimsInHecho: caso.hecho_id ? hechoVictimCounts[caso.hecho_id] : 1,
           }
         }),
       )

@@ -135,17 +135,23 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
       let allVictims: any[] = []
 
       if (hechoId) {
-        // Get all casos linked to this hecho
-        const { data: allCasosForHecho } = await supabase.from("casos").select("id, victima_id").eq("hecho_id", hechoId)
+        const { data: allCasosForHecho } = await supabase
+          .from("casos")
+          .select("id, victima_id, created_at")
+          .eq("hecho_id", hechoId)
+          .order("created_at", { ascending: true })
 
         if (allCasosForHecho && allCasosForHecho.length > 0) {
-          // Fetch all victims data
-          const victimIds = allCasosForHecho.map((c) => c.victima_id).filter(Boolean)
-          const { data: victimsData } = await supabase.from("victimas").select("*").in("id", victimIds)
+          const orderedVictimIds = allCasosForHecho.map((c) => c.victima_id).filter(Boolean)
 
-          // Map victims with their caso_id
+          // Fetch all victims data
+          const { data: victimsData } = await supabase.from("victimas").select("*").in("id", orderedVictimIds)
+
           allVictims = await Promise.all(
-            (victimsData || []).map(async (v: any) => {
+            orderedVictimIds.map(async (victimId: string) => {
+              const v = victimsData?.find((vd: any) => vd.id === victimId)
+              if (!v) return null
+
               const caso = allCasosForHecho.find((c) => c.victima_id === v.id)
 
               // Fetch victim resources
@@ -185,6 +191,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               }
             }),
           )
+
+          allVictims = allVictims.filter(Boolean)
         }
       }
 
