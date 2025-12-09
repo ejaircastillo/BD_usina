@@ -102,7 +102,8 @@ function getTipoLabel(tipo: string | null): string {
 export function ResourcesForm({ data = [], onChange, savedResources = [] }: ResourcesFormProps) {
   const addResource = () => {
     const newResource = {
-      id: Date.now(),
+      id: `temp-${Date.now()}`,
+      isNew: true,
       tipo: "",
       tipo_otro: "",
       titulo: "",
@@ -119,16 +120,16 @@ export function ResourcesForm({ data = [], onChange, savedResources = [] }: Reso
     onChange([...data, newResource])
   }
 
-  const removeResource = (id: number) => {
+  const removeResource = (id: string | number) => {
     onChange(data.filter((resource) => resource.id !== id))
   }
 
-  const updateResource = (id: number, field: string, value: any) => {
+  const updateResource = (id: string | number, field: string, value: any) => {
     onChange(data.map((resource) => (resource.id === id ? { ...resource, [field]: value } : resource)))
   }
 
   const handleFileUpload = (
-    id: number,
+    id: string | number,
     file: { path: string; url: string; name: string; type: string; size: number },
   ) => {
     onChange(
@@ -147,7 +148,7 @@ export function ResourcesForm({ data = [], onChange, savedResources = [] }: Reso
     )
   }
 
-  const handleFileRemove = (id: number) => {
+  const handleFileRemove = (id: string | number) => {
     onChange(
       data.map((resource) =>
         resource.id === id
