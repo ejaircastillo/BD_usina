@@ -225,9 +225,7 @@ export function AnimatedCasesGrid() {
     <div className="space-y-8 py-8">
       <div className="text-center mb-12">
         <h2 className="text-3xl font-bold text-slate-900 font-heading mb-4">Casos Recientes</h2>
-        <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-          Base de datos de víctimas - Seguimiento continuo de casos de violencia institucional
-        </p>
+        <p className="text-lg text-slate-600 max-w-2xl mx-auto">Base de datos de víctimas</p>
       </div>
 
       <div className="space-y-8">
