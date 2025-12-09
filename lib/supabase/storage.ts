@@ -1,4 +1,4 @@
-import { createClient } from "./client"
+import type { SupabaseClient } from "@supabase/supabase-js"
 
 const BUCKET_NAME = "archivos-casos"
 
@@ -9,9 +9,7 @@ export interface UploadResult {
   error?: string
 }
 
-export async function uploadFile(file: File, folder = "general"): Promise<UploadResult> {
-  const supabase = createClient()
-
+export async function uploadFile(supabase: SupabaseClient, file: File, folder = "general"): Promise<UploadResult> {
   // Generate unique file name
   const timestamp = Date.now()
   const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_")
@@ -37,9 +35,7 @@ export async function uploadFile(file: File, folder = "general"): Promise<Upload
   }
 }
 
-export async function deleteFile(filePath: string): Promise<boolean> {
-  const supabase = createClient()
-
+export async function deleteFile(supabase: SupabaseClient, filePath: string): Promise<boolean> {
   const { error } = await supabase.storage.from(BUCKET_NAME).remove([filePath])
 
   if (error) {
@@ -50,11 +46,14 @@ export async function deleteFile(filePath: string): Promise<boolean> {
   return true
 }
 
-export function getFileUrl(filePath: string): string {
-  const supabase = createClient()
+export function getFileUrl(supabase: SupabaseClient, filePath: string): string {
   const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath)
-
   return data.publicUrl
+}
+
+export function getPublicFileUrl(filePath: string): string {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  return `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${filePath}`
 }
 
 export function getFileTypeIcon(mimeType: string): string {

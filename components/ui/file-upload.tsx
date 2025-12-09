@@ -4,6 +4,7 @@ import { useCallback, useState } from "react"
 import { useDropzone } from "react-dropzone"
 import { Upload, X, FileText, ImageIcon, Video, Music, File, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { createClient } from "@/lib/supabase/client"
 import { uploadFile, formatFileSize } from "@/lib/supabase/storage"
 import { cn } from "@/lib/utils"
 
@@ -54,7 +55,8 @@ export function FileUpload({
       setIsUploading(true)
       setError(null)
 
-      const result = await uploadFile(file, folder)
+      const supabase = createClient()
+      const result = await uploadFile(supabase, file, folder)
 
       if (result.success && result.path && result.url) {
         onUpload({

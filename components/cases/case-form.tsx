@@ -546,14 +546,19 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 }
               }
 
-              // Improved filter for new resources
               if (accused.resources && Array.isArray(accused.resources)) {
-                const newResources = accused.resources.filter(
-                  (r: any) =>
-                    r.isNew === true ||
-                    (typeof r.id === "string" && r.id.startsWith("temp-")) ||
-                    typeof r.id === "number",
-                )
+                const newResources = accused.resources.filter((r: any) => {
+                  // Resource is NEW if it has no id, or has a temp id, or has isNew flag
+                  const hasNoId = !r.id || r.id === ""
+                  const hasTempId = typeof r.id === "string" && r.id.startsWith("temp-")
+                  const hasNumericId = typeof r.id === "number"
+                  const hasNewFlag = r.isNew === true
+                  // A real UUID is a 36-character string with dashes (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+                  const hasRealUUID =
+                    typeof r.id === "string" && r.id.length === 36 && r.id.includes("-") && !r.id.startsWith("temp-")
+
+                  return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
+                })
                 for (const resource of newResources) {
                   if (resource.titulo || resource.url || resource.archivo_path) {
                     await supabase.from("recursos").insert([
@@ -691,10 +696,16 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
         // Insert general resources for the fact
         if (formData.resources && Array.isArray(formData.resources) && formData.resources.length > 0) {
-          const newResources = formData.resources.filter(
-            (r: any) =>
-              r.isNew === true || (typeof r.id === "string" && r.id.startsWith("temp-")) || typeof r.id === "number",
-          )
+          const newResources = formData.resources.filter((r: any) => {
+            const hasNoId = !r.id || r.id === ""
+            const hasTempId = typeof r.id === "string" && r.id.startsWith("temp-")
+            const hasNumericId = typeof r.id === "number"
+            const hasNewFlag = r.isNew === true
+            const hasRealUUID =
+              typeof r.id === "string" && r.id.length === 36 && r.id.includes("-") && !r.id.startsWith("temp-")
+
+            return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
+          })
           for (const resource of newResources) {
             if (resource.titulo || resource.url || resource.archivo_path) {
               await supabase.from("recursos").insert([
@@ -717,10 +728,16 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
         // Insert victim resources
         if (victim.resources && Array.isArray(victim.resources) && victim.resources.length > 0) {
-          const newVictimResources = victim.resources.filter(
-            (r: any) =>
-              r.isNew === true || (typeof r.id === "string" && r.id.startsWith("temp-")) || typeof r.id === "number",
-          )
+          const newVictimResources = victim.resources.filter((r: any) => {
+            const hasNoId = !r.id || r.id === ""
+            const hasTempId = typeof r.id === "string" && r.id.startsWith("temp-")
+            const hasNumericId = typeof r.id === "number"
+            const hasNewFlag = r.isNew === true
+            const hasRealUUID =
+              typeof r.id === "string" && r.id.length === 36 && r.id.includes("-") && !r.id.startsWith("temp-")
+
+            return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
+          })
           for (const resource of newVictimResources) {
             if (resource.titulo || resource.url || resource.archivo_path) {
               await supabase.from("recursos").insert([
