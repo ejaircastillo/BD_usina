@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -18,13 +19,11 @@ export function VictimForm({ data, onChange, showDates = false }: VictimFormProp
   const { countries, isLoading: isLoadingCountries } = useCountries()
   const { provincias, municipios, isLoadingProvincias, isLoadingMunicipios, fetchMunicipios } = useArgentinaGeo()
 
-  console.log("[v0] VictimForm received data:", {
-    nombreCompleto: data.nombreCompleto,
-    notasAdicionales: data.notasAdicionales,
-    provinciaResidencia: data.provinciaResidencia,
-    municipioResidencia: data.municipioResidencia,
-    fullData: data,
-  })
+  useEffect(() => {
+    if (data.provinciaResidencia && provincias.length > 0) {
+      fetchMunicipios(data.provinciaResidencia)
+    }
+  }, [data.provinciaResidencia, provincias.length, fetchMunicipios])
 
   const handleChange = (field: string, value: string) => {
     onChange({
