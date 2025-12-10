@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { createClient } from "@/lib/supabase/client"
 import { FilePreviewDialog } from "@/components/ui/file-preview-dialog"
+import { formatDateUTC } from "@/lib/utils"
 
 interface CaseDetailContentProps {
   caseId: string
@@ -686,7 +687,7 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
               {victima.fecha_nacimiento && (
                 <div>
                   <label className="text-sm font-medium text-slate-500">Fecha de Nacimiento</label>
-                  <p className="text-slate-900">{new Date(victima.fecha_nacimiento).toLocaleDateString("es-AR")}</p>
+                  <p className="text-slate-900">{formatDateUTC(victima.fecha_nacimiento)}</p>
                 </div>
               )}
               {victima.nacionalidad && (
@@ -743,7 +744,7 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
                     <label className="text-sm font-medium text-slate-500">Fecha del Hecho</label>
                     <p className="text-slate-900 flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-slate-400" />
-                      {new Date(hecho.fecha_hecho).toLocaleDateString("es-AR")}
+                      {formatDateUTC(hecho.fecha_hecho)}
                     </p>
                   </div>
                 )}
@@ -752,7 +753,7 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
                     <label className="text-sm font-medium text-slate-500">Fecha de Fallecimiento</label>
                     <p className="text-slate-900 flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-slate-400" />
-                      {new Date(hecho.fecha_fallecimiento).toLocaleDateString("es-AR")}
+                      {formatDateUTC(hecho.fecha_fallecimiento)}
                     </p>
                   </div>
                 )}
@@ -928,9 +929,7 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
                           {imputado.fecha_veredicto && (
                             <div>
                               <span className="font-medium text-slate-500">Fecha Veredicto:</span>{" "}
-                              <span className="text-slate-900">
-                                {new Date(imputado.fecha_veredicto).toLocaleDateString("es-AR")}
-                              </span>
+                              <span className="text-slate-900">{formatDateUTC(imputado.fecha_veredicto)}</span>
                             </div>
                           )}
                           {imputado.cargos && (

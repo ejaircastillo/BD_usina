@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, User, Search, Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { formatDateUTC } from "@/lib/utils"
 
 interface CaseData {
   id: string
@@ -241,19 +242,21 @@ export function CasesGrid({ filters = {} }: CasesGridProps) {
         {filteredCases.map((case_) => (
           <Link key={case_.id} href={`/casos/${case_.id}`}>
             <Card className="h-full hover:shadow-lg transition-shadow duration-200 border-slate-200 hover:border-slate-300 cursor-pointer">
+              <CardHeader>
+                <h3 className="font-semibold text-lg text-slate-900 font-heading mb-2 line-clamp-2">
+                  {case_.victimName}
+                </h3>
+              </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="font-semibold text-lg text-slate-900 font-heading mb-2 line-clamp-2">
-                      {case_.victimName}
-                    </h3>
                     <Badge className={`text-xs ${getStatusColor(case_.status)}`}>{case_.status}</Badge>
                   </div>
 
                   <div className="space-y-2 text-sm text-slate-600">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-slate-400" />
-                      <span>{new Date(case_.incidentDate).toLocaleDateString("es-AR")}</span>
+                      <span>{formatDateUTC(case_.incidentDate)}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -275,6 +278,7 @@ export function CasesGrid({ filters = {} }: CasesGridProps) {
                   </div>
                 </div>
               </CardContent>
+              <CardFooter>{/* Additional footer content can be added here */}</CardFooter>
             </Card>
           </Link>
         ))}
