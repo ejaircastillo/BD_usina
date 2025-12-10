@@ -63,13 +63,6 @@ interface IncidentData {
   resumenHecho: string
   tipoCrimen: string
   tipoArma: string
-  armaOtro: string
-  contextType: string
-  perpetratorType: string
-  perpetrators: string[]
-  perpetratorDetails: string
-  aggravatingFactors: string[]
-  otherAggravating: string
   resources: Resource[]
 }
 
@@ -117,13 +110,6 @@ const getEmptyIncidentData = (): IncidentData => ({
   resumenHecho: "",
   tipoCrimen: "",
   tipoArma: "",
-  armaOtro: "",
-  contextType: "",
-  perpetratorType: "",
-  perpetrators: [],
-  perpetratorDetails: "",
-  aggravatingFactors: [],
-  otherAggravating: "",
   resources: [],
 })
 
@@ -338,6 +324,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
       // Load incident resources
       const { data: incidentResources } = await supabase.from("recursos").select("*").eq("hecho_id", hecho?.id)
+      // Load imputados
+      const { data: imputadosData } = await supabase.from("imputados").select("*").eq("hecho_id", hecho?.id)
 
       // Load seguimiento
       const { data: seguimientoData } = await supabase
@@ -360,17 +348,10 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           resumenHecho: hecho?.resumen_hecho || "",
           tipoCrimen: hecho?.tipo_crimen || "",
           tipoArma: hecho?.tipo_arma || "",
-          armaOtro: hecho?.arma_otro || "",
-          contextType: hecho?.context_type || "",
-          perpetratorType: hecho?.perpetrator_type || "",
-          perpetrators: hecho?.perpetrators || [],
-          perpetratorDetails: hecho?.perpetrator_details || "",
-          aggravatingFactors: hecho?.aggravating_factors || [],
-          otherAggravating: hecho?.other_aggravating || "",
           resources:
             incidentResources?.map((r: any) => ({
               id: r.id,
-              tipo: r.tipo || "",
+              tipo: r.tipo || "other",
               titulo: r.titulo || "",
               url: r.url || "",
               fuente: r.fuente || "",
@@ -381,7 +362,28 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               archivo_size: r.archivo_size || 0,
             })) || [],
         },
-        accused: [], // Assuming AccusedForm will handle fetching/displaying accused data
+        accused:
+          imputadosData?.map((imp: any) => ({
+            id: imp.id,
+            apellidoNombre: imp.apellido_nombre || "",
+            alias: imp.alias || "",
+            edad: imp.edad?.toString() || "",
+            menorEdad: imp.menor_edad || false,
+            nacionalidad: imp.nacionalidad || "",
+            juzgadoUfi: imp.juzgado_ufi || "",
+            estadoProcesal: imp.estado_procesal || "",
+            pena: imp.pena || "",
+            juicioAbreviado: imp.juicio_abreviado || false,
+            prisionPerpetua: imp.prision_perpetua || false,
+            fechaVeredicto: imp.fecha_veredicto || "",
+            documentoIdentidad: imp.documento_identidad || "",
+            tribunalFallo: imp.tribunal_fallo || "",
+            esExtranjero: imp.es_extranjero || false,
+            detenidoPrevio: imp.detenido_previo || false,
+            fallecido: imp.fallecido || false,
+            esReincidente: imp.es_reincidente || false,
+            cargos: imp.cargos || "",
+          })) || [],
         followUp: {
           estadoCausa: seguimientoData?.estado_causa || "",
           caratula: seguimientoData?.caratula || "",
@@ -394,7 +396,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         resources:
           incidentResources?.map((r: any) => ({
             id: r.id,
-            tipo: r.tipo || "",
+            tipo: r.tipo || "other",
             titulo: r.titulo || "",
             url: r.url || "",
             fuente: r.fuente || "",
@@ -434,7 +436,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
     hecho_id: hechoId,
     apellido_nombre: accused.apellidoNombre,
     alias: accused.alias || null,
-    edad: accused.edad || null,
+    edad: accused.edad ? Number.parseInt(accused.edad) : null,
     menor_edad: accused.menorEdad || false,
     nacionalidad: accused.nacionalidad || null,
     juzgado_ufi: accused.juzgadoUfi || null,
@@ -593,7 +595,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         }
 
-        // Update incident data
         const { error: incidentError } = await supabase
           .from("hechos")
           .update({
@@ -605,48 +606,36 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             resumen_hecho: formData.incident.resumenHecho || null,
             tipo_crimen: formData.incident.tipoCrimen || null,
             tipo_arma: formData.incident.tipoArma || null,
-            arma_otro: formData.incident.armaOtro || null,
-            context_type: formData.incident.contextType || null,
-            perpetrator_type: formData.incident.perpetratorType || null,
-            perpetrators: formData.incident.perpetrators || [],
-            perpetrator_details: formData.incident.perpetratorDetails || null,
-            aggravating_factors: formData.incident.aggravatingFactors || [],
-            other_aggravating: formData.incident.otherAggravating || null,
           })
           .eq("id", hechoId)
 
         if (incidentError) throw incidentError
 
-        // Update or insert accused (actors)
+        // Update or insert accused (imputados)
         if (formData.accused && Array.isArray(formData.accused)) {
           const currentAccusedIds = formData.accused
             .filter((a: any) => a.id && typeof a.id === "string" && !a.id.startsWith("temp-"))
             .map((a: any) => a.id)
 
-          // Delete accused that are no longer in the form
-          const { data: existingAccused } = await supabase.from("actores").select("id").eq("hecho_id", hechoId)
-          const existingAccusedIds = existingAccused?.map((a) => a.id) || []
-          const accusedToDelete = existingAccusedIds.filter((id) => !currentAccusedIds.includes(id))
+          // Delete imputados that are no longer in the form
+          const { data: existingImputados } = await supabase.from("imputados").select("id").eq("hecho_id", hechoId)
+          const existingImputadosIds = existingImputados?.map((a) => a.id) || []
+          const imputadosToDelete = existingImputadosIds.filter((id) => !currentAccusedIds.includes(id))
 
-          for (const idToDelete of accusedToDelete) {
-            await supabase.from("actores").delete().eq("id", idToDelete)
+          for (const idToDelete of imputadosToDelete) {
+            await supabase.from("imputados").delete().eq("id", idToDelete)
           }
 
           for (const accused of formData.accused) {
-            const accusedData = {
-              hecho_id: hechoId,
-              tipo_actor: "Imputado", // Assuming 'accused' implies 'Imputado'
-              nombre_actor: accused.apellidoNombre,
-              rol_actor: accused.rol || "", // Add if AccusedForm has a 'rol' field
-              detalles_actor: accused.detalles || "", // Add if AccusedForm has 'detalles'
-            }
+            const imputadoData = buildImputadoInsert(accused, hechoId)
 
             if (accused.id && typeof accused.id === "string" && !accused.id.startsWith("temp-")) {
-              // Update existing accused
-              await supabase.from("actores").update(accusedData).eq("id", accused.id)
+              // Update existing imputado
+              const { id, ...updateData } = imputadoData as any
+              await supabase.from("imputados").update(updateData).eq("id", accused.id)
             } else {
-              // Insert new accused
-              await supabase.from("actores").insert([accusedData])
+              // Insert new imputado
+              await supabase.from("imputados").insert([imputadoData])
             }
           }
         }
@@ -740,13 +729,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               resumen_hecho: formData.incident.resumenHecho || null,
               tipo_crimen: formData.incident.tipoCrimen || null,
               tipo_arma: formData.incident.tipoArma || null,
-              arma_otro: formData.incident.armaOtro || null,
-              context_type: formData.incident.contextType || null,
-              perpetrator_type: formData.incident.perpetratorType || null,
-              perpetrators: formData.incident.perpetrators || [],
-              perpetrator_details: formData.incident.perpetratorDetails || null,
-              aggravating_factors: formData.incident.aggravatingFactors || [],
-              other_aggravating: formData.incident.otherAggravating || null,
             },
           ])
           .select()
@@ -820,19 +802,13 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           await supabase.from("hechos").update({ victima_id: createdVictimIds[0] }).eq("id", hechoId)
         }
 
-        // Step 3: Iterate through ACCUSED array (actors)
-        if (formData.actors && Array.isArray(formData.actors)) {
-          for (const actor of formData.actors) {
-            if (actor.nombreActor) {
-              await supabase.from("actores").insert([
-                {
-                  hecho_id: hechoId,
-                  tipo_actor: actor.tipoActor || "Otro",
-                  nombre_actor: actor.nombreActor,
-                  rol_actor: actor.rolActor || null,
-                  detalles_actor: actor.detallesActor || null,
-                },
-              ])
+        // Step 3: Iterate through IMPUTADOS array
+        if (formData.accused && Array.isArray(formData.accused)) {
+          for (const accused of formData.accused) {
+            const imputadoData = buildImputadoInsert(accused, hechoId)
+            if (imputadoData.apellido_nombre) {
+              // Ensure there's a name before inserting
+              await supabase.from("imputados").insert([imputadoData])
             }
           }
         }
