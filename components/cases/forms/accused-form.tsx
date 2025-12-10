@@ -30,11 +30,13 @@ const ESTADO_PROCESAL_OPTIONS = [
 const judicialLevels = [
   "Fiscalía o Juzgado de Instrucción",
   "Juzgado de primera instancia",
+  "Tribunal",
   "Cámara de apelaciones",
   "Cámara de casación",
   "Tribunal superior",
   "Corte suprema",
   "Juzgado de ejecución",
+  "Otro",
 ]
 
 interface AccusedFormProps {

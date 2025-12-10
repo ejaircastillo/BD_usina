@@ -675,8 +675,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
                 // Update or insert instancias
                 for (const instancia of accused.instanciasJudiciales) {
-                  if (!instancia.numeroCausa && !instancia.fiscalFiscalia && !instancia.caratula) continue
-
                   const hasInstanciaId =
                     instancia.id && typeof instancia.id === "string" && !instancia.id.startsWith("temp-")
 
@@ -751,18 +749,16 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               // Insert all instancias for new imputado
               if (accused.instanciasJudiciales && Array.isArray(accused.instanciasJudiciales)) {
                 for (const instancia of accused.instanciasJudiciales) {
-                  if (instancia.numeroCausa || instancia.fiscalFiscalia || instancia.caratula) {
-                    await supabase.from("instancias_judiciales").insert([
-                      {
-                        imputado_id: accusedId,
-                        hecho_id: hechoId,
-                        numero_causa: instancia.numeroCausa || null,
-                        fiscal_fiscalia: instancia.fiscalFiscalia || null,
-                        caratula: instancia.caratula || null,
-                        orden_nivel: instancia.ordenNivel || null,
-                      },
-                    ])
-                  }
+                  await supabase.from("instancias_judiciales").insert([
+                    {
+                      imputado_id: accusedId,
+                      hecho_id: hechoId,
+                      numero_causa: instancia.numeroCausa || null,
+                      fiscal_fiscalia: instancia.fiscalFiscalia || null,
+                      caratula: instancia.caratula || null,
+                      orden_nivel: instancia.ordenNivel || null,
+                    },
+                  ])
                 }
               }
 
@@ -1009,18 +1005,16 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               // Insert judicial instances
               if (accused.instanciasJudiciales && Array.isArray(accused.instanciasJudiciales)) {
                 for (const instancia of accused.instanciasJudiciales) {
-                  if (instancia.numeroCausa || instancia.fiscalFiscalia || instancia.caratula) {
-                    await supabase.from("instancias_judiciales").insert([
-                      {
-                        imputado_id: accusedId,
-                        hecho_id: hechoId,
-                        numero_causa: instancia.numeroCausa || null,
-                        fiscal_fiscalia: instancia.fiscalFiscalia || null,
-                        caratula: instancia.caratula || null,
-                        orden_nivel: instancia.ordenNivel || null,
-                      },
-                    ])
-                  }
+                  await supabase.from("instancias_judiciales").insert([
+                    {
+                      imputado_id: accusedId,
+                      hecho_id: hechoId,
+                      numero_causa: instancia.numeroCausa || null,
+                      fiscal_fiscalia: instancia.fiscalFiscalia || null,
+                      caratula: instancia.caratula || null,
+                      orden_nivel: instancia.ordenNivel || null,
+                    },
+                  ])
                 }
               }
 
