@@ -655,17 +655,17 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               if (updateError) throw updateError
               accusedId = accused.id
 
+              // Save instances_judiciales for each accused
               if (accused.instanciasJudiciales && Array.isArray(accused.instanciasJudiciales)) {
-                // Get existing instancias for this imputado
                 const { data: existingInstancias } = await supabase
                   .from("instancias_judiciales")
                   .select("id")
                   .eq("imputado_id", accusedId)
 
-                const existingInstanciaIds = existingInstancias?.map((i) => i.id) || []
+                const existingInstanciaIds = (existingInstancias || []).map((i) => i.id)
                 const formInstanciaIds = accused.instanciasJudiciales
-                  .filter((i: any) => i.id && typeof i.id === "string" && !i.id.startsWith("temp-"))
-                  .map((i: any) => i.id)
+                  .filter((inst: any) => inst.id && typeof inst.id === "string" && !inst.id.startsWith("temp-"))
+                  .map((inst: any) => inst.id)
 
                 // Delete instancias removed from form
                 const instanciasToDelete = existingInstanciaIds.filter((id) => !formInstanciaIds.includes(id))
@@ -678,29 +678,45 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                   const hasInstanciaId =
                     instancia.id && typeof instancia.id === "string" && !instancia.id.startsWith("temp-")
 
+                  console.log("[v0] Saving instancia judicial:", {
+                    id: instancia.id,
+                    ordenNivel: instancia.ordenNivel,
+                    numeroCausa: instancia.numeroCausa,
+                    hasInstanciaId,
+                  })
+
                   if (hasInstanciaId) {
                     // Update existing instancia
-                    await supabase
+                    const { error: updateError } = await supabase
                       .from("instancias_judiciales")
                       .update({
                         numero_causa: instancia.numeroCausa || null,
-                        fiscal_fiscalia: instancia.fiscalFiscalia || null,
+                        fiscal: instancia.fiscalFiscalia || null,
+                        fiscalia: instancia.fiscalFiscalia || null,
                         caratula: instancia.caratula || null,
                         orden_nivel: instancia.ordenNivel || null,
                       })
                       .eq("id", instancia.id)
+
+                    if (updateError) {
+                      console.log("[v0] Error updating instancia:", updateError)
+                    }
                   } else {
                     // Insert new instancia
-                    await supabase.from("instancias_judiciales").insert([
+                    const { error: insertError } = await supabase.from("instancias_judiciales").insert([
                       {
                         imputado_id: accusedId,
-                        hecho_id: hechoId,
                         numero_causa: instancia.numeroCausa || null,
-                        fiscal_fiscalia: instancia.fiscalFiscalia || null,
+                        fiscal: instancia.fiscalFiscalia || null,
+                        fiscalia: instancia.fiscalFiscalia || null,
                         caratula: instancia.caratula || null,
                         orden_nivel: instancia.ordenNivel || null,
                       },
                     ])
+
+                    if (insertError) {
+                      console.log("[v0] Error inserting instancia:", insertError)
+                    }
                   }
                 }
               }
@@ -749,16 +765,25 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               // Insert all instancias for new imputado
               if (accused.instanciasJudiciales && Array.isArray(accused.instanciasJudiciales)) {
                 for (const instancia of accused.instanciasJudiciales) {
-                  await supabase.from("instancias_judiciales").insert([
+                  // Debug log for create mode instances
+                  console.log("[v0] Inserting instancia (create mode):", {
+                    ordenNivel: instancia.ordenNivel,
+                    numeroCausa: instancia.numeroCausa,
+                  })
+                  const { error: insertError } = await supabase.from("instancias_judiciales").insert([
                     {
                       imputado_id: accusedId,
-                      hecho_id: hechoId,
                       numero_causa: instancia.numeroCausa || null,
-                      fiscal_fiscalia: instancia.fiscalFiscalia || null,
+                      fiscal: instancia.fiscalFiscalia || null,
+                      fiscalia: instancia.fiscalFiscalia || null,
                       caratula: instancia.caratula || null,
                       orden_nivel: instancia.ordenNivel || null,
                     },
                   ])
+
+                  if (insertError) {
+                    console.log("[v0] Error inserting instancia (create mode):", insertError)
+                  }
                 }
               }
 
@@ -1005,16 +1030,25 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               // Insert judicial instances
               if (accused.instanciasJudiciales && Array.isArray(accused.instanciasJudiciales)) {
                 for (const instancia of accused.instanciasJudiciales) {
-                  await supabase.from("instancias_judiciales").insert([
+                  // Debug log for create mode instances
+                  console.log("[v0] Inserting instancia (create mode):", {
+                    ordenNivel: instancia.ordenNivel,
+                    numeroCausa: instancia.numeroCausa,
+                  })
+                  const { error: insertError } = await supabase.from("instancias_judiciales").insert([
                     {
                       imputado_id: accusedId,
-                      hecho_id: hechoId,
                       numero_causa: instancia.numeroCausa || null,
-                      fiscal_fiscalia: instancia.fiscalFiscalia || null,
+                      fiscal: instancia.fiscalFiscalia || null,
+                      fiscalia: instancia.fiscalFiscalia || null,
                       caratula: instancia.caratula || null,
                       orden_nivel: instancia.ordenNivel || null,
                     },
                   ])
+
+                  if (insertError) {
+                    console.log("[v0] Error inserting instancia (create mode):", insertError)
+                  }
                 }
               }
 
