@@ -6,10 +6,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Trash2, Loader2 } from "lucide-react"
+import { Plus, Trash2, Loader2, UserX } from "lucide-react"
 import React from "react"
 import { ResourcesForm } from "./resources-form"
 import { useCountries } from "@/hooks/use-countries"
+
+const NOMBRE_DESCONOCIDO_OPTIONS = [
+  { value: "Sin Identificar", label: "Sin Identificar" },
+  { value: "Se desconoce nombre", label: "Se desconoce nombre" },
+]
 
 const ESTADO_PROCESAL_OPTIONS = [
   { value: "sospechoso", label: "Sospechoso" },
@@ -190,11 +195,30 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-slate-700">Apellido y Nombre</Label>
                     <Input
-                      placeholder="Apellido y nombre (o 'Sin identificar')"
+                      placeholder="Apellido y nombre"
                       value={accused.apellidoNombre || ""}
                       onChange={(e) => updateAccused(accused.id, "apellidoNombre", e.target.value)}
                       className="border-slate-300"
                     />
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {NOMBRE_DESCONOCIDO_OPTIONS.map((option) => (
+                        <Button
+                          key={option.value}
+                          type="button"
+                          variant={accused.apellidoNombre === option.value ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => updateAccused(accused.id, "apellidoNombre", option.value)}
+                          className={`text-xs flex items-center gap-1 ${
+                            accused.apellidoNombre === option.value
+                              ? "bg-slate-800 hover:bg-slate-700"
+                              : "hover:bg-slate-100"
+                          }`}
+                        >
+                          <UserX className="w-3 h-3" />
+                          {option.label}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="space-y-2">
