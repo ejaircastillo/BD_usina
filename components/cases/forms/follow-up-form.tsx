@@ -19,6 +19,7 @@ interface FollowUpFormProps {
   resources?: any[]
   onResourcesChange?: (resources: any[]) => void
   savedResources?: Recurso[]
+  onDeleteSavedResource?: (resourceId: string) => void
 }
 
 interface FollowUpData {
@@ -53,6 +54,7 @@ export function FollowUpForm({
   resources = [],
   onResourcesChange,
   savedResources = [],
+  onDeleteSavedResource,
 }: FollowUpFormProps) {
   const handleChange = (field: string, value: string | boolean) => {
     onChange({
@@ -600,7 +602,12 @@ export function FollowUpForm({
           <p className="text-sm text-slate-500 mb-4">
             Sube documentos generales del caso: notas de prensa, resoluciones judiciales, informes, etc.
           </p>
-          <ResourcesForm data={resources} onChange={onResourcesChange || (() => {})} savedResources={savedResources} />
+          <ResourcesForm
+            data={resources.filter((r: any) => !r.id || r.id.toString().startsWith("temp-"))}
+            onChange={onResourcesChange || (() => {})}
+            savedResources={savedResources}
+            onDeleteSavedResource={onDeleteSavedResource}
+          />
         </div>
       </div>
     </div>

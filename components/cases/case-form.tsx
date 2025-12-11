@@ -44,6 +44,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
   const [activeTab, setActiveTab] = useState("victim")
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(mode === "edit")
+  const [resourcesToDelete, setResourcesToDelete] = useState<string[]>([])
 
   const [formData, setFormData] = useState({
     victims: [getEmptyVictimData()],
@@ -452,6 +453,10 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
     }
   }
 
+  const markResourceForDeletion = (resourceId: string) => {
+    setResourcesToDelete((prev) => [...prev, resourceId])
+  }
+
   const buildImputadoInsert = (accused: any, hechoId: string) => ({
     hecho_id: hechoId,
     apellido_nombre: accused.apellidoNombre,
@@ -503,6 +508,28 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
     try {
       if (mode === "edit" && caseId) {
         const hechoId = realIds.hechoId
+
+        if (resourcesToDelete.length > 0) {
+          // First, get the file paths to delete from storage
+          const { data: resourcesToRemove } = await supabase
+            .from("recursos")
+            .select("archivo_path")
+            .in("id", resourcesToDelete)
+
+          // Delete files from storage
+          if (resourcesToRemove && resourcesToRemove.length > 0) {
+            const pathsToDelete = resourcesToRemove.map((r) => r.archivo_path).filter((p): p is string => !!p)
+
+            if (pathsToDelete.length > 0) {
+              await supabase.storage.from("case-files").remove(pathsToDelete)
+            }
+          }
+
+          // Delete records from database
+          const { error: deleteError } = await supabase.from("recursos").delete().in("id", resourcesToDelete)
+
+          if (deleteError) throw deleteError
+        }
 
         for (const victim of formData.victims) {
           if (victim.id) {
@@ -702,7 +729,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                   .filter((inst: any) => inst.id && typeof inst.id === "string" && !inst.id.startsWith("temp-"))
                   .map((inst: any) => inst.id)
 
-                // Delete instancias removed from form
+                // Delete instances removed from form
                 const instanciasToDelete = existingInstanciaIds.filter((id) => !formInstanciaIds.includes(id))
                 for (const idToDelete of instanciasToDelete) {
                   await supabase.from("instancias_judiciales").delete().eq("id", idToDelete)
@@ -912,9 +939,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           }
         }
 
-        // Insert general resources for the fact
         if (formData.resources && Array.isArray(formData.resources) && formData.resources.length > 0) {
-          const newResources = formData.resources.filter((r: any) => {
+          const newSeguimientoResources = formData.resources.filter((r: any) => {
             const hasNoId = !r.id || r.id === ""
             const hasTempId = typeof r.id === "string" && r.id.startsWith("temp-")
             const hasNumericId = typeof r.id === "number"
@@ -924,8 +950,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
             return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
           })
-          // Solo guardar si tiene archivo o URL
-          for (const resource of newResources) {
+
+          for (const resource of newSeguimientoResources) {
             if (resource.url || resource.archivo_path) {
               const resourceData = {
                 hecho_id: hechoId,
@@ -939,12 +965,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 archivo_tipo: resource.archivo_tipo || null,
                 archivo_size: resource.archivo_size ? Number(resource.archivo_size) : null,
               }
-              console.log("[v0] Saving resource:", resourceData)
               const { error: resourceError } = await supabase.from("recursos").insert([resourceData])
-              if (resourceError) {
-                console.log("[v0] Error saving resource:", resourceError)
-                throw resourceError
-              }
+              if (resourceError) throw resourceError
             }
           }
         }
@@ -1319,18 +1341,19 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                         </p>
                         <ResourcesForm
                           data={(victim.resources || []).filter(
-                            (r: any) => !r.id || (typeof r.id === "string" && r.id.startsWith("temp-")),
+                            (r: any) => !r.id || r.id.toString().startsWith("temp-"),
                           )}
                           onChange={(resources) => {
-                            const savedRes = (victim.resources || []).filter(
+                            const savedResources = (victim.resources || []).filter(
                               (r: any) => r.id && typeof r.id === "string" && !r.id.startsWith("temp-"),
                             )
-                            updateVictim(index, { ...victim, resources: [...savedRes, ...resources] })
+                            updateVictim(index, { ...victim, resources: [...savedResources, ...resources] })
                           }}
                           savedResources={(victim.resources || []).filter(
                             (r: any) => r.id && typeof r.id === "string" && !r.id.startsWith("temp-"),
                           )}
                           onDeleteSavedResource={(resourceId) => {
+                            markResourceForDeletion(resourceId)
                             const updatedResources = (victim.resources || []).filter((r: any) => r.id !== resourceId)
                             updateVictim(index, { ...victim, resources: updatedResources })
                           }}
@@ -1375,7 +1398,14 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                   onChange={(data) => setFormData((prev) => ({ ...prev, followUp: data }))}
                   resources={formData.resources}
                   onResourcesChange={(resources) => setFormData((prev) => ({ ...prev, resources }))}
-                  savedResources={formData.resources.filter((r: any) => r.id && typeof r.id === "string")}
+                  savedResources={formData.resources.filter(
+                    (r: any) => r.id && typeof r.id === "string" && !r.id.startsWith("temp-"),
+                  )}
+                  onDeleteSavedResource={(resourceId) => {
+                    markResourceForDeletion(resourceId)
+                    const updatedResources = formData.resources.filter((r: any) => r.id !== resourceId)
+                    setFormData((prev) => ({ ...prev, resources: updatedResources }))
+                  }}
                 />
               </div>
             </TabsContent>
