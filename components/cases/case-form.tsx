@@ -798,7 +798,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               if (accusedError) throw accusedError
               accusedId = accusedData.id
 
-              // Insert all instancias for new imputado
+              // Insert all instances for new imputado
               if (accused.instanciasJudiciales && Array.isArray(accused.instanciasJudiciales)) {
                 for (const instancia of accused.instanciasJudiciales) {
                   // Debug log for create mode instances
@@ -1318,14 +1318,18 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                           Fotos, documentos y enlaces relacionados con esta víctima.
                         </p>
                         <ResourcesForm
-                          data={(victim.resources || []).filter((r: any) => !r.id || typeof r.id === "number")}
+                          data={(victim.resources || []).filter(
+                            (r: any) => !r.id || (typeof r.id === "string" && r.id.startsWith("temp-")),
+                          )}
                           onChange={(resources) => {
                             const savedRes = (victim.resources || []).filter(
-                              (r: any) => r.id && typeof r.id === "string",
+                              (r: any) => r.id && typeof r.id === "string" && !r.id.startsWith("temp-"),
                             )
                             updateVictim(index, { ...victim, resources: [...savedRes, ...resources] })
                           }}
-                          savedResources={(victim.resources || []).filter((r: any) => r.id && typeof r.id === "string")}
+                          savedResources={(victim.resources || []).filter(
+                            (r: any) => r.id && typeof r.id === "string" && !r.id.startsWith("temp-"),
+                          )}
                           onDeleteSavedResource={(resourceId) => {
                             const updatedResources = (victim.resources || []).filter((r: any) => r.id !== resourceId)
                             updateVictim(index, { ...victim, resources: updatedResources })

@@ -595,12 +595,18 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                     Fotos, documentos, noticias y enlaces relacionados con este imputado.
                   </p>
                   <ResourcesForm
-                    data={(accused.resources || []).filter((r: any) => !r.id || typeof r.id === "number")}
+                    data={(accused.resources || []).filter(
+                      (r: any) => !r.id || (typeof r.id === "string" && r.id.startsWith("temp-")),
+                    )}
                     onChange={(resources) => {
-                      const savedRes = (accused.resources || []).filter((r: any) => r.id && typeof r.id === "string")
+                      const savedRes = (accused.resources || []).filter(
+                        (r: any) => r.id && typeof r.id === "string" && !r.id.startsWith("temp-"),
+                      )
                       updateResources(accused.id, [...savedRes, ...resources])
                     }}
-                    savedResources={(accused.resources || []).filter((r: any) => r.id && typeof r.id === "string")}
+                    savedResources={(accused.resources || []).filter(
+                      (r: any) => r.id && typeof r.id === "string" && !r.id.startsWith("temp-"),
+                    )}
                     onDeleteSavedResource={(resourceId) => deleteSavedResource(accused.id, resourceId)}
                   />
                 </div>
