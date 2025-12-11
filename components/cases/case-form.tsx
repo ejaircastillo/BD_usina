@@ -828,11 +828,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               // Insert all instances for new imputado
               if (accused.instanciasJudiciales && Array.isArray(accused.instanciasJudiciales)) {
                 for (const instancia of accused.instanciasJudiciales) {
-                  // Debug log for create mode instances
-                  console.log("[v0] Inserting instancia (create mode):", {
-                    ordenNivel: instancia.ordenNivel,
-                    numeroCausa: instancia.numeroCausa,
-                  })
                   const { error: insertError } = await supabase.from("instancias_judiciales").insert([
                     {
                       imputado_id: accusedId,
@@ -845,7 +840,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                   ])
 
                   if (insertError) {
-                    console.log("[v0] Error inserting instancia (create mode):", insertError)
+                    console.log("[v0] Error inserting instancia:", insertError)
                   }
                 }
               }
@@ -853,13 +848,13 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               // Insert accused resources
               if (accused.resources && Array.isArray(accused.resources)) {
                 for (const resource of accused.resources) {
-                  if (resource.titulo || resource.url || resource.archivo_path) {
+                  if (resource.url || resource.archivo_path) {
                     await supabase.from("recursos").insert([
                       {
                         imputado_id: accusedId,
                         hecho_id: hechoId,
-                        tipo: resource.tipo || null,
-                        titulo: resource.titulo || null,
+                        tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
+                        titulo: resource.titulo || resource.archivo_nombre || null,
                         url: resource.url || null,
                         fuente: resource.fuente || null,
                         descripcion: resource.descripcion || null,
@@ -1095,11 +1090,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               // Insert judicial instances
               if (accused.instanciasJudiciales && Array.isArray(accused.instanciasJudiciales)) {
                 for (const instancia of accused.instanciasJudiciales) {
-                  // Debug log for create mode instances
-                  console.log("[v0] Inserting instancia (create mode):", {
-                    ordenNivel: instancia.ordenNivel,
-                    numeroCausa: instancia.numeroCausa,
-                  })
                   const { error: insertError } = await supabase.from("instancias_judiciales").insert([
                     {
                       imputado_id: accusedId,
@@ -1112,7 +1102,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                   ])
 
                   if (insertError) {
-                    console.log("[v0] Error inserting instancia (create mode):", insertError)
+                    console.log("[v0] Error inserting instancia:", insertError)
                   }
                 }
               }
@@ -1120,13 +1110,13 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               // Insert accused resources
               if (accused.resources && Array.isArray(accused.resources)) {
                 for (const resource of accused.resources) {
-                  if (resource.titulo || resource.url || resource.archivo_path) {
+                  if (resource.url || resource.archivo_path) {
                     await supabase.from("recursos").insert([
                       {
                         imputado_id: accusedId,
                         hecho_id: hechoId,
-                        tipo: resource.tipo || null,
-                        titulo: resource.titulo || null,
+                        tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
+                        titulo: resource.titulo || resource.archivo_nombre || null,
                         url: resource.url || null,
                         fuente: resource.fuente || null,
                         descripcion: resource.descripcion || null,
@@ -1397,7 +1387,13 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                   data={formData.followUp}
                   onChange={(data) => setFormData((prev) => ({ ...prev, followUp: data }))}
                   resources={formData.resources}
-                  onResourcesChange={(resources) => setFormData((prev) => ({ ...prev, resources }))}
+                  onResourcesChange={(newResources) => {
+                    // Keep saved resources (those with non-temp IDs) and add/update new ones
+                    const savedResources = formData.resources.filter(
+                      (r: any) => r.id && typeof r.id === "string" && !r.id.startsWith("temp-"),
+                    )
+                    setFormData((prev) => ({ ...prev, resources: [...savedResources, ...newResources] }))
+                  }}
                   savedResources={formData.resources.filter(
                     (r: any) => r.id && typeof r.id === "string" && !r.id.startsWith("temp-"),
                   )}

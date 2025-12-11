@@ -20,6 +20,10 @@ export function VictimForm({ data, onChange, showDates = false }: VictimFormProp
     data.provinciaResidencia,
   )
 
+  const savedMunicipioInList = municipios.some(
+    (m) => m.nombre === data.municipioResidencia || m.nombre.toLowerCase() === data.municipioResidencia?.toLowerCase(),
+  )
+
   const handleChange = (field: string, value: string) => {
     onChange({
       ...data,
@@ -226,11 +230,18 @@ export function VictimForm({ data, onChange, showDates = false }: VictimFormProp
                   ) : municipios.length === 0 ? (
                     <div className="p-4 text-center text-slate-500 text-sm">No hay localidades disponibles</div>
                   ) : (
-                    municipios.map((municipio) => (
-                      <SelectItem key={municipio.id} value={municipio.nombre}>
-                        {municipio.nombre}
-                      </SelectItem>
-                    ))
+                    <>
+                      {data.municipioResidencia && !savedMunicipioInList && (
+                        <SelectItem key="saved-value" value={data.municipioResidencia}>
+                          {data.municipioResidencia} (guardado)
+                        </SelectItem>
+                      )}
+                      {municipios.map((municipio) => (
+                        <SelectItem key={municipio.id} value={municipio.nombre}>
+                          {municipio.nombre}
+                        </SelectItem>
+                      ))}
+                    </>
                   )}
                 </SelectContent>
               </Select>
