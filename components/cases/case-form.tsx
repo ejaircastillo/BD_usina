@@ -1387,7 +1387,13 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                   data={formData.followUp}
                   onChange={(data) => setFormData((prev) => ({ ...prev, followUp: data }))}
                   resources={formData.resources}
-                  onResourcesChange={(resources) => setFormData((prev) => ({ ...prev, resources }))}
+                  onResourcesChange={(newResources) => {
+                    // Keep saved resources (those with non-temp IDs) and add/update new ones
+                    const savedResources = formData.resources.filter(
+                      (r: any) => r.id && typeof r.id === "string" && !r.id.startsWith("temp-"),
+                    )
+                    setFormData((prev) => ({ ...prev, resources: [...savedResources, ...newResources] }))
+                  }}
                   savedResources={formData.resources.filter(
                     (r: any) => r.id && typeof r.id === "string" && !r.id.startsWith("temp-"),
                   )}
