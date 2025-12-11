@@ -40,10 +40,28 @@ interface SavedResource {
   archivo_size: number | null
 }
 
+interface Recurso {
+  id: string
+  isNew: boolean
+  tipo: string
+  tipo_otro: string
+  titulo: string
+  url: string
+  fuente: string
+  fecha: string
+  descripcion: string
+  archivo_path: string | null
+  archivo_nombre: string | null
+  archivo_tipo: string | null
+  archivo_size: number | null
+  input_mode: string
+}
+
 interface ResourcesFormProps {
-  data: any[]
-  onChange: (data: any[]) => void
+  data?: Recurso[]
+  onChange?: (data: Recurso[]) => void
   savedResources?: SavedResource[] // Previously saved resources from DB
+  onDeleteSavedResource?: (resourceId: string) => void
 }
 
 function getResourceIcon(tipo: string | null, archivoTipo: string | null) {
@@ -99,7 +117,7 @@ function getTipoLabel(tipo: string | null): string {
   }
 }
 
-export function ResourcesForm({ data = [], onChange, savedResources = [] }: ResourcesFormProps) {
+export function ResourcesForm({ data = [], onChange, savedResources = [], onDeleteSavedResource }: ResourcesFormProps) {
   const addResource = () => {
     const newResource = {
       id: `temp-${Date.now()}`,
@@ -117,52 +135,62 @@ export function ResourcesForm({ data = [], onChange, savedResources = [] }: Reso
       archivo_size: null,
       input_mode: "url",
     }
-    onChange([...data, newResource])
+    if (onChange) {
+      onChange([...data, newResource])
+    }
   }
 
   const removeResource = (id: string | number) => {
-    onChange(data.filter((resource) => resource.id !== id))
+    if (onChange) {
+      onChange(data.filter((resource) => resource.id !== id))
+    }
   }
 
   const updateResource = (id: string | number, field: string, value: any) => {
-    onChange(data.map((resource) => (resource.id === id ? { ...resource, [field]: value } : resource)))
+    if (onChange) {
+      onChange(data.map((resource) => (resource.id === id ? { ...resource, [field]: value } : resource)))
+    }
   }
 
   const handleFileUpload = (
     id: string | number,
     file: { path: string; url: string; name: string; type: string; size: number },
   ) => {
-    onChange(
-      data.map((resource) =>
-        resource.id === id
-          ? {
-              ...resource,
-              archivo_path: file.path,
-              archivo_nombre: file.name,
-              archivo_tipo: file.type,
-              archivo_size: file.size,
-              url: file.url,
-            }
-          : resource,
-      ),
-    )
+    if (onChange) {
+      onChange(
+        data.map((resource) =>
+          resource.id === id
+            ? {
+                ...resource,
+                archivo_path: file.path,
+                archivo_nombre: file.name,
+                archivo_tipo: file.type,
+                archivo_size: file.size,
+                url: file.url,
+              }
+            : resource,
+        ),
+      )
+    }
   }
 
   const handleFileRemove = (id: string | number) => {
-    onChange(
-      data.map((resource) =>
-        resource.id === id
-          ? {
-              ...resource,
-              archivo_path: null,
-              archivo_nombre: null,
-              archivo_tipo: null,
-              archivo_size: null,
-              url: "",
-            }
-          : resource,
-      ),
-    )
+    if (onChange) {
+      onChange(
+        data.map((resource) =>
+          resource.id === id
+            ? {
+                ...resource,
+                archivo_path: null,
+                archivo_nombre: null,
+                archivo_tipo: null,
+                archivo_size: null,
+                url: "",
+              }
+            : resource,
+        ),
+      )
+    }
   }
 
   const handleDownload = (resource: SavedResource) => {
@@ -239,28 +267,41 @@ export function ResourcesForm({ data = [], onChange, savedResources = [] }: Reso
                         {resource.archivo_size ? formatFileSize(resource.archivo_size) : "-"}
                       </TableCell>
                       <TableCell className="text-right">
-                        {resource.archivo_path || resource.url ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDownload(resource)}
-                            className="flex items-center gap-1 text-green-700 hover:text-green-800 hover:bg-green-100"
-                          >
-                            {resource.archivo_path ? (
-                              <>
-                                <Download className="w-4 h-4" />
-                                <span className="hidden sm:inline">Descargar</span>
-                              </>
-                            ) : (
-                              <>
-                                <ExternalLink className="w-4 h-4" />
-                                <span className="hidden sm:inline">Ver</span>
-                              </>
-                            )}
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-slate-400">Sin archivo</span>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {resource.archivo_path || resource.url ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownload(resource)}
+                              className="flex items-center gap-1 text-green-700 hover:text-green-800 hover:bg-green-100"
+                            >
+                              {resource.archivo_path ? (
+                                <>
+                                  <Download className="w-4 h-4" />
+                                  <span className="hidden sm:inline">Descargar</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ExternalLink className="w-4 h-4" />
+                                  <span className="hidden sm:inline">Ver</span>
+                                </>
+                              )}
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-slate-400">Sin archivo</span>
+                          )}
+                          {onDeleteSavedResource && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onDeleteSavedResource(resource.id)}
+                              className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              <span className="hidden sm:inline">Eliminar</span>
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

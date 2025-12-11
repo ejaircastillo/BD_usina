@@ -401,7 +401,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         accused: imputadosWithResources,
         followUp: {
           miembroAsignado: seguimientoData?.miembro_asignado || "",
-          contactoFamilia: seguimientoData?.contacto_familia || "",
+          contactoFamiliar: seguimientoData?.contacto_familia || "",
           telefonoContacto: seguimientoData?.telefono_contacto || "",
           tipoAcompanamiento: seguimientoData?.tipo_acompanamiento || [],
           abogadoQuerellante: seguimientoData?.abogado_querellante || "",
@@ -1315,8 +1315,18 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                           Fotos, documentos y enlaces relacionados con esta víctima.
                         </p>
                         <ResourcesForm
-                          data={victim.resources || []}
-                          onChange={(resources) => updateVictim(index, { ...victim, resources })}
+                          data={(victim.resources || []).filter((r: any) => !r.id || typeof r.id === "number")}
+                          onChange={(resources) => {
+                            const savedRes = (victim.resources || []).filter(
+                              (r: any) => r.id && typeof r.id === "string",
+                            )
+                            updateVictim(index, { ...victim, resources: [...savedRes, ...resources] })
+                          }}
+                          savedResources={(victim.resources || []).filter((r: any) => r.id && typeof r.id === "string")}
+                          onDeleteSavedResource={(resourceId) => {
+                            const updatedResources = (victim.resources || []).filter((r: any) => r.id !== resourceId)
+                            updateVictim(index, { ...victim, resources: updatedResources })
+                          }}
                         />
                       </div>
                     </CardContent>

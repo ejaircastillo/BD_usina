@@ -113,6 +113,14 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
     updateAccused(accusedId, "resources", resources)
   }
 
+  const deleteSavedResource = (accusedId: number, resourceId: string) => {
+    const accused = data.find((a) => a.id === accusedId)
+    if (accused) {
+      const updatedResources = (accused.resources || []).filter((r: any) => r.id !== resourceId)
+      updateAccused(accusedId, "resources", updatedResources)
+    }
+  }
+
   const addInstanciaJudicial = (accusedId: number) => {
     const accused = data.find((a) => a.id === accusedId)
     if (accused) {
@@ -587,8 +595,13 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                     Fotos, documentos, noticias y enlaces relacionados con este imputado.
                   </p>
                   <ResourcesForm
-                    data={accused.resources || []}
-                    onChange={(resources) => updateResources(accused.id, resources)}
+                    data={(accused.resources || []).filter((r: any) => !r.id || typeof r.id === "number")}
+                    onChange={(resources) => {
+                      const savedRes = (accused.resources || []).filter((r: any) => r.id && typeof r.id === "string")
+                      updateResources(accused.id, [...savedRes, ...resources])
+                    }}
+                    savedResources={(accused.resources || []).filter((r: any) => r.id && typeof r.id === "string")}
+                    onDeleteSavedResource={(resourceId) => deleteSavedResource(accused.id, resourceId)}
                   />
                 </div>
               </CardContent>
