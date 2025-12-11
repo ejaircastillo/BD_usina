@@ -108,6 +108,8 @@ export interface Seguimiento {
   datos_abogados_querellantes: AbogadoQuerellante[] | null
   tiene_abogado_querellante: string | null // 'si', 'no', 'ns_nc'
   abogado_usina_amicus: string | null
+  otra_intervencion: boolean | null
+  otra_intervencion_descripcion: string | null
   created_at: string
   updated_at: string
 }

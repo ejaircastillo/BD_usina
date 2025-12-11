@@ -58,7 +58,10 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
       tipoArma: "",
     },
     accused: [],
-    followUp: {},
+    followUp: {
+      otraIntervencion: false,
+      otraIntervencionDescripcion: "",
+    },
     resources: [],
     victimResources: [],
   })
@@ -261,11 +264,40 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         }
       }
 
-      // Fetch seguimiento data
-      let seguimientoData: any = null
-      if (hechoId) {
-        const { data } = await supabase.from("seguimiento").select("*").eq("hecho_id", hechoId).maybeSingle()
-        seguimientoData = data
+      // Load seguimiento
+      const { data: seguimientoData } = await supabase.from("seguimiento").select("*").eq("hecho_id", hechoId).single()
+
+      if (seguimientoData) {
+        setFormData((prev) => ({
+          ...prev,
+          followUp: {
+            primerContacto: seguimientoData.primer_contacto || false,
+            comoLlegoCaso: seguimientoData.como_llego_caso || "",
+            miembroAsignado: seguimientoData.miembro_asignado || "",
+            contactoFamiliar: seguimientoData.contacto_familia || "",
+            telefonoContacto: seguimientoData.telefono_contacto || "",
+            tipoAcompanamiento: seguimientoData.tipo_acompanamiento || [],
+            abogadoQuerellante: seguimientoData.abogado_querellante || "",
+            amicusCuriae: seguimientoData.amicus_curiae || false,
+            notasSeguimiento: seguimientoData.notas_seguimiento || "",
+            emailContacto: seguimientoData.email_contacto || "",
+            direccionContacto: seguimientoData.direccion_contacto || "",
+            telefonoMiembro: seguimientoData.telefono_miembro || "",
+            emailMiembro: seguimientoData.email_miembro || "",
+            fechaAsignacion: seguimientoData.fecha_asignacion || "",
+            proximasAcciones: seguimientoData.proximas_acciones || "",
+            parentescoContacto: seguimientoData.parentesco_contacto || "",
+            parentescoOtro: seguimientoData.parentesco_otro || "",
+            tieneAbogadoQuerellante: seguimientoData.tiene_abogado_querellante || "ns_nc",
+            abogadoUsinaAmicus: seguimientoData.abogado_usina_amicus || "",
+            abogadoAmicusFirmante: seguimientoData.abogado_amicus_firmante || "",
+            listaMiembrosAsignados: seguimientoData.lista_miembros_asignados || [],
+            listaContactosFamiliares: seguimientoData.lista_contactos_familiares || [],
+            datosAbogadosQuerellantes: seguimientoData.datos_abogados_querellantes || [],
+            otraIntervencion: seguimientoData.otra_intervencion || false,
+            otraIntervencionDescripcion: seguimientoData.otra_intervencion_descripcion || "",
+          },
+        }))
       }
 
       // Fetch imputados
@@ -351,7 +383,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         ? seguimientoData.lista_contactos_familiares
         : []
       const listaAbogados = Array.isArray(seguimientoData?.datos_abogados_querellantes)
-        ? seguimientoData.lista_contactos_familiares
+        ? seguimientoData.datos_abogados_querellantes
         : []
 
       setFormData({
@@ -391,6 +423,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           listaMiembrosAsignados: listaMiembros,
           listaContactosFamiliares: listaContactos,
           datosAbogadosQuerellantes: listaAbogados,
+          otraIntervencion: seguimientoData?.otra_intervencion || false,
+          otraIntervencionDescripcion: seguimientoData?.otra_intervencion_descripcion || "",
         },
         resources: recursosGenerales.map((r: any) => ({
           id: r.id,
@@ -860,6 +894,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             lista_miembros_asignados: formData.followUp.listaMiembrosAsignados || null,
             lista_contactos_familiares: formData.followUp.listaContactosFamiliares || null,
             datos_abogados_querellantes: formData.followUp.datosAbogadosQuerellantes || null,
+            otra_intervencion: formData.followUp.otraIntervencion || false,
+            otra_intervencion_descripcion: formData.followUp.otraIntervencionDescripcion || null,
           }
 
           if (existingSeguimiento?.id) {
@@ -1110,6 +1146,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               lista_miembros_asignados: formData.followUp.listaMiembrosAsignados || null,
               lista_contactos_familiares: formData.followUp.listaContactosFamiliares || null,
               datos_abogados_querellantes: formData.followUp.datosAbogadosQuerellantes || null,
+              otra_intervencion: formData.followUp.otraIntervencion || false,
+              otra_intervencion_descripcion: formData.followUp.otraIntervencionDescripcion || null,
             },
           ])
           if (followUpError) throw followUpError
