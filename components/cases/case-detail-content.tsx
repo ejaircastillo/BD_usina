@@ -966,12 +966,7 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
                                     )}
                                     {inst.fiscal && (
                                       <div>
-                                        <span className="font-medium">Fiscal:</span> {inst.fiscal}
-                                      </div>
-                                    )}
-                                    {inst.fiscalia && (
-                                      <div>
-                                        <span className="font-medium">Fiscalía:</span> {inst.fiscalia}
+                                        <span className="font-medium">Fiscal / Fiscalía:</span> {inst.fiscal}
                                       </div>
                                     )}
                                   </div>

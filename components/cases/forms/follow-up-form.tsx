@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Plus, Trash2, UserPlus, Users, Scale, FileText } from "lucide-react"
 import { ResourcesForm } from "./resources-form"
 import type { Recurso } from "@/lib/types/database"
+import type { AbogadoQuerellante } from "@/lib/types/database"
 
 interface FollowUpFormProps {
   data: any
@@ -18,6 +19,19 @@ interface FollowUpFormProps {
   resources?: any[]
   onResourcesChange?: (resources: any[]) => void
   savedResources?: Recurso[]
+}
+
+interface FollowUpData {
+  tipoAcompanamiento?: string[]
+  abogadoQuerellante?: string
+  abogadoUsinaFirmo?: string
+  amicusCuriae?: boolean
+  abogadoUsinaAmicus?: string
+  abogadoAmicusFirmante?: string
+  tieneAbogadoQuerellante?: string
+  datosAbogadosQuerellantes?: AbogadoQuerellante[]
+  otraIntervencion?: boolean
+  otraIntervencionDescripcion?: string
 }
 
 const PARENTESCO_OPTIONS = [
@@ -164,6 +178,35 @@ export function FollowUpForm({
                 </Label>
               </div>
             ))}
+          </div>
+
+          <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="otra-intervencion"
+                checked={data.otraIntervencion || false}
+                onCheckedChange={(checked) => handleChange("otraIntervencion", checked as boolean)}
+              />
+              <Label htmlFor="otra-intervencion" className="text-sm font-medium text-slate-700">
+                Otra intervención
+              </Label>
+            </div>
+
+            {data.otraIntervencion && (
+              <div className="mt-3 ml-6">
+                <Label htmlFor="otraIntervencionDescripcion" className="text-sm font-medium text-slate-700">
+                  Descripción de la intervención
+                </Label>
+                <Textarea
+                  id="otraIntervencionDescripcion"
+                  placeholder="Describa la intervención de UJ..."
+                  value={data.otraIntervencionDescripcion || ""}
+                  onChange={(e) => handleChange("otraIntervencionDescripcion", e.target.value)}
+                  className="mt-1"
+                  rows={3}
+                />
+              </div>
+            )}
           </div>
 
           <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">

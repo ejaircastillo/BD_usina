@@ -58,7 +58,10 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
       tipoArma: "",
     },
     accused: [],
-    followUp: {},
+    followUp: {
+      otraIntervencion: false,
+      otraIntervencionDescripcion: "",
+    },
     resources: [],
     victimResources: [],
   })
@@ -261,11 +264,40 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         }
       }
 
-      // Fetch seguimiento data
-      let seguimientoData: any = null
-      if (hechoId) {
-        const { data } = await supabase.from("seguimiento").select("*").eq("hecho_id", hechoId).maybeSingle()
-        seguimientoData = data
+      // Load seguimiento
+      const { data: seguimientoData } = await supabase.from("seguimiento").select("*").eq("hecho_id", hechoId).single()
+
+      if (seguimientoData) {
+        setFormData((prev) => ({
+          ...prev,
+          followUp: {
+            primerContacto: seguimientoData.primer_contacto || false,
+            comoLlegoCaso: seguimientoData.como_llego_caso || "",
+            miembroAsignado: seguimientoData.miembro_asignado || "",
+            contactoFamiliar: seguimientoData.contacto_familia || "",
+            telefonoContacto: seguimientoData.telefono_contacto || "",
+            tipoAcompanamiento: seguimientoData.tipo_acompanamiento || [],
+            abogadoQuerellante: seguimientoData.abogado_querellante || "",
+            amicusCuriae: seguimientoData.amicus_curiae || false,
+            notasSeguimiento: seguimientoData.notas_seguimiento || "",
+            emailContacto: seguimientoData.email_contacto || "",
+            direccionContacto: seguimientoData.direccion_contacto || "",
+            telefonoMiembro: seguimientoData.telefono_miembro || "",
+            emailMiembro: seguimientoData.email_miembro || "",
+            fechaAsignacion: seguimientoData.fecha_asignacion || "",
+            proximasAcciones: seguimientoData.proximas_acciones || "",
+            parentescoContacto: seguimientoData.parentesco_contacto || "",
+            parentescoOtro: seguimientoData.parentesco_otro || "",
+            tieneAbogadoQuerellante: seguimientoData.tiene_abogado_querellante || "ns_nc",
+            abogadoUsinaAmicus: seguimientoData.abogado_usina_amicus || "",
+            abogadoAmicusFirmante: seguimientoData.abogado_amicus_firmante || "",
+            listaMiembrosAsignados: seguimientoData.lista_miembros_asignados || [],
+            listaContactosFamiliares: seguimientoData.lista_contactos_familiares || [],
+            datosAbogadosQuerellantes: seguimientoData.datos_abogados_querellantes || [],
+            otraIntervencion: seguimientoData.otra_intervencion || false,
+            otraIntervencionDescripcion: seguimientoData.otra_intervencion_descripcion || "",
+          },
+        }))
       }
 
       // Fetch imputados
@@ -351,7 +383,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         ? seguimientoData.lista_contactos_familiares
         : []
       const listaAbogados = Array.isArray(seguimientoData?.datos_abogados_querellantes)
-        ? seguimientoData.lista_contactos_familiares
+        ? seguimientoData.datos_abogados_querellantes
         : []
 
       setFormData({
@@ -369,7 +401,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         accused: imputadosWithResources,
         followUp: {
           miembroAsignado: seguimientoData?.miembro_asignado || "",
-          contactoFamilia: seguimientoData?.contacto_familia || "",
+          contactoFamiliar: seguimientoData?.contacto_familia || "",
           telefonoContacto: seguimientoData?.telefono_contacto || "",
           tipoAcompanamiento: seguimientoData?.tipo_acompanamiento || [],
           abogadoQuerellante: seguimientoData?.abogado_querellante || "",
@@ -391,6 +423,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           listaMiembrosAsignados: listaMiembros,
           listaContactosFamiliares: listaContactos,
           datosAbogadosQuerellantes: listaAbogados,
+          otraIntervencion: seguimientoData?.otra_intervencion || false,
+          otraIntervencionDescripcion: seguimientoData?.otra_intervencion_descripcion || "",
         },
         resources: recursosGenerales.map((r: any) => ({
           id: r.id,
@@ -505,13 +539,14 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
               })
 
+              // Solo guardar si tiene archivo o URL
               for (const resource of newVictimResources) {
-                if (resource.titulo || resource.url || resource.archivo_path) {
+                if (resource.url || resource.archivo_path) {
                   const resourceData = {
                     victima_id: victim.id,
                     hecho_id: hechoId,
                     tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                    titulo: resource.titulo || null,
+                    titulo: resource.titulo || resource.archivo_nombre || null,
                     url: resource.url || null,
                     fuente: resource.fuente || null,
                     descripcion: resource.descripcion || null,
@@ -655,17 +690,17 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               if (updateError) throw updateError
               accusedId = accused.id
 
+              // Save instances_judiciales for each accused
               if (accused.instanciasJudiciales && Array.isArray(accused.instanciasJudiciales)) {
-                // Get existing instancias for this imputado
                 const { data: existingInstancias } = await supabase
                   .from("instancias_judiciales")
                   .select("id")
                   .eq("imputado_id", accusedId)
 
-                const existingInstanciaIds = existingInstancias?.map((i) => i.id) || []
+                const existingInstanciaIds = (existingInstancias || []).map((i) => i.id)
                 const formInstanciaIds = accused.instanciasJudiciales
-                  .filter((i: any) => i.id && typeof i.id === "string" && !i.id.startsWith("temp-"))
-                  .map((i: any) => i.id)
+                  .filter((inst: any) => inst.id && typeof inst.id === "string" && !inst.id.startsWith("temp-"))
+                  .map((inst: any) => inst.id)
 
                 // Delete instancias removed from form
                 const instanciasToDelete = existingInstanciaIds.filter((id) => !formInstanciaIds.includes(id))
@@ -675,34 +710,48 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
                 // Update or insert instancias
                 for (const instancia of accused.instanciasJudiciales) {
-                  if (!instancia.numeroCausa && !instancia.fiscalFiscalia && !instancia.caratula) continue
-
                   const hasInstanciaId =
                     instancia.id && typeof instancia.id === "string" && !instancia.id.startsWith("temp-")
 
+                  console.log("[v0] Saving instancia judicial:", {
+                    id: instancia.id,
+                    ordenNivel: instancia.ordenNivel,
+                    numeroCausa: instancia.numeroCausa,
+                    hasInstanciaId,
+                  })
+
                   if (hasInstanciaId) {
                     // Update existing instancia
-                    await supabase
+                    const { error: updateError } = await supabase
                       .from("instancias_judiciales")
                       .update({
                         numero_causa: instancia.numeroCausa || null,
-                        fiscal_fiscalia: instancia.fiscalFiscalia || null,
+                        fiscal: instancia.fiscalFiscalia || null,
+                        fiscalia: instancia.fiscalFiscalia || null,
                         caratula: instancia.caratula || null,
                         orden_nivel: instancia.ordenNivel || null,
                       })
                       .eq("id", instancia.id)
+
+                    if (updateError) {
+                      console.log("[v0] Error updating instancia:", updateError)
+                    }
                   } else {
                     // Insert new instancia
-                    await supabase.from("instancias_judiciales").insert([
+                    const { error: insertError } = await supabase.from("instancias_judiciales").insert([
                       {
                         imputado_id: accusedId,
-                        hecho_id: hechoId,
                         numero_causa: instancia.numeroCausa || null,
-                        fiscal_fiscalia: instancia.fiscalFiscalia || null,
+                        fiscal: instancia.fiscalFiscalia || null,
+                        fiscalia: instancia.fiscalFiscalia || null,
                         caratula: instancia.caratula || null,
                         orden_nivel: instancia.ordenNivel || null,
                       },
                     ])
+
+                    if (insertError) {
+                      console.log("[v0] Error inserting instancia:", insertError)
+                    }
                   }
                 }
               }
@@ -718,14 +767,15 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
                   return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
                 })
+                // Solo guardar si tiene archivo o URL
                 for (const resource of newResources) {
-                  if (resource.titulo || resource.url || resource.archivo_path) {
+                  if (resource.url || resource.archivo_path) {
                     await supabase.from("recursos").insert([
                       {
                         imputado_id: accusedId,
                         hecho_id: hechoId,
-                        tipo: resource.tipo || null,
-                        titulo: resource.titulo || null,
+                        tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
+                        titulo: resource.titulo || resource.archivo_nombre || null,
                         url: resource.url || null,
                         fuente: resource.fuente || null,
                         descripcion: resource.descripcion || null,
@@ -748,25 +798,32 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               if (accusedError) throw accusedError
               accusedId = accusedData.id
 
-              // Insert all instancias for new imputado
+              // Insert all instances for new imputado
               if (accused.instanciasJudiciales && Array.isArray(accused.instanciasJudiciales)) {
                 for (const instancia of accused.instanciasJudiciales) {
-                  if (instancia.numeroCausa || instancia.fiscalFiscalia || instancia.caratula) {
-                    await supabase.from("instancias_judiciales").insert([
-                      {
-                        imputado_id: accusedId,
-                        hecho_id: hechoId,
-                        numero_causa: instancia.numeroCausa || null,
-                        fiscal_fiscalia: instancia.fiscalFiscalia || null,
-                        caratula: instancia.caratula || null,
-                        orden_nivel: instancia.ordenNivel || null,
-                      },
-                    ])
+                  // Debug log for create mode instances
+                  console.log("[v0] Inserting instancia (create mode):", {
+                    ordenNivel: instancia.ordenNivel,
+                    numeroCausa: instancia.numeroCausa,
+                  })
+                  const { error: insertError } = await supabase.from("instancias_judiciales").insert([
+                    {
+                      imputado_id: accusedId,
+                      numero_causa: instancia.numeroCausa || null,
+                      fiscal: instancia.fiscalFiscalia || null,
+                      fiscalia: instancia.fiscalFiscalia || null,
+                      caratula: instancia.caratula || null,
+                      orden_nivel: instancia.ordenNivel || null,
+                    },
+                  ])
+
+                  if (insertError) {
+                    console.log("[v0] Error inserting instancia (create mode):", insertError)
                   }
                 }
               }
 
-              // Insert all resources for new imputado
+              // Insert accused resources
               if (accused.resources && Array.isArray(accused.resources)) {
                 for (const resource of accused.resources) {
                   if (resource.titulo || resource.url || resource.archivo_path) {
@@ -839,6 +896,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             lista_miembros_asignados: formData.followUp.listaMiembrosAsignados || null,
             lista_contactos_familiares: formData.followUp.listaContactosFamiliares || null,
             datos_abogados_querellantes: formData.followUp.datosAbogadosQuerellantes || null,
+            otra_intervencion: formData.followUp.otraIntervencion || false,
+            otra_intervencion_descripcion: formData.followUp.otraIntervencionDescripcion || null,
           }
 
           if (existingSeguimiento?.id) {
@@ -865,12 +924,13 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
             return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
           })
+          // Solo guardar si tiene archivo o URL
           for (const resource of newResources) {
-            if (resource.titulo || resource.url || resource.archivo_path) {
+            if (resource.url || resource.archivo_path) {
               const resourceData = {
                 hecho_id: hechoId,
                 tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                titulo: resource.titulo || null,
+                titulo: resource.titulo || resource.archivo_nombre || null,
                 url: resource.url || null,
                 fuente: resource.fuente || null,
                 descripcion: resource.descripcion || null,
@@ -879,8 +939,12 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 archivo_tipo: resource.archivo_tipo || null,
                 archivo_size: resource.archivo_size ? Number(resource.archivo_size) : null,
               }
+              console.log("[v0] Saving resource:", resourceData)
               const { error: resourceError } = await supabase.from("recursos").insert([resourceData])
-              if (resourceError) throw resourceError
+              if (resourceError) {
+                console.log("[v0] Error saving resource:", resourceError)
+                throw resourceError
+              }
             }
           }
         }
@@ -1009,17 +1073,24 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               // Insert judicial instances
               if (accused.instanciasJudiciales && Array.isArray(accused.instanciasJudiciales)) {
                 for (const instancia of accused.instanciasJudiciales) {
-                  if (instancia.numeroCausa || instancia.fiscalFiscalia || instancia.caratula) {
-                    await supabase.from("instancias_judiciales").insert([
-                      {
-                        imputado_id: accusedId,
-                        hecho_id: hechoId,
-                        numero_causa: instancia.numeroCausa || null,
-                        fiscal_fiscalia: instancia.fiscalFiscalia || null,
-                        caratula: instancia.caratula || null,
-                        orden_nivel: instancia.ordenNivel || null,
-                      },
-                    ])
+                  // Debug log for create mode instances
+                  console.log("[v0] Inserting instancia (create mode):", {
+                    ordenNivel: instancia.ordenNivel,
+                    numeroCausa: instancia.numeroCausa,
+                  })
+                  const { error: insertError } = await supabase.from("instancias_judiciales").insert([
+                    {
+                      imputado_id: accusedId,
+                      numero_causa: instancia.numeroCausa || null,
+                      fiscal: instancia.fiscalFiscalia || null,
+                      fiscalia: instancia.fiscalFiscalia || null,
+                      caratula: instancia.caratula || null,
+                      orden_nivel: instancia.ordenNivel || null,
+                    },
+                  ])
+
+                  if (insertError) {
+                    console.log("[v0] Error inserting instancia (create mode):", insertError)
                   }
                 }
               }
@@ -1078,6 +1149,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               lista_miembros_asignados: formData.followUp.listaMiembrosAsignados || null,
               lista_contactos_familiares: formData.followUp.listaContactosFamiliares || null,
               datos_abogados_querellantes: formData.followUp.datosAbogadosQuerellantes || null,
+              otra_intervencion: formData.followUp.otraIntervencion || false,
+              otra_intervencion_descripcion: formData.followUp.otraIntervencionDescripcion || null,
             },
           ])
           if (followUpError) throw followUpError
@@ -1245,8 +1318,22 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                           Fotos, documentos y enlaces relacionados con esta víctima.
                         </p>
                         <ResourcesForm
-                          data={victim.resources || []}
-                          onChange={(resources) => updateVictim(index, { ...victim, resources })}
+                          data={(victim.resources || []).filter(
+                            (r: any) => !r.id || (typeof r.id === "string" && r.id.startsWith("temp-")),
+                          )}
+                          onChange={(resources) => {
+                            const savedRes = (victim.resources || []).filter(
+                              (r: any) => r.id && typeof r.id === "string" && !r.id.startsWith("temp-"),
+                            )
+                            updateVictim(index, { ...victim, resources: [...savedRes, ...resources] })
+                          }}
+                          savedResources={(victim.resources || []).filter(
+                            (r: any) => r.id && typeof r.id === "string" && !r.id.startsWith("temp-"),
+                          )}
+                          onDeleteSavedResource={(resourceId) => {
+                            const updatedResources = (victim.resources || []).filter((r: any) => r.id !== resourceId)
+                            updateVictim(index, { ...victim, resources: updatedResources })
+                          }}
                         />
                       </div>
                     </CardContent>

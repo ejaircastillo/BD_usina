@@ -30,11 +30,13 @@ const ESTADO_PROCESAL_OPTIONS = [
 const judicialLevels = [
   "Fiscalía o Juzgado de Instrucción",
   "Juzgado de primera instancia",
+  "Tribunal",
   "Cámara de apelaciones",
   "Cámara de casación",
   "Tribunal superior",
   "Corte suprema",
   "Juzgado de ejecución",
+  "Otro",
 ]
 
 interface AccusedFormProps {
@@ -109,6 +111,14 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
 
   const updateResources = (accusedId: number, resources: any[]) => {
     updateAccused(accusedId, "resources", resources)
+  }
+
+  const deleteSavedResource = (accusedId: number, resourceId: string) => {
+    const accused = data.find((a) => a.id === accusedId)
+    if (accused) {
+      const updatedResources = (accused.resources || []).filter((r: any) => r.id !== resourceId)
+      updateAccused(accusedId, "resources", updatedResources)
+    }
   }
 
   const addInstanciaJudicial = (accusedId: number) => {
@@ -585,8 +595,19 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                     Fotos, documentos, noticias y enlaces relacionados con este imputado.
                   </p>
                   <ResourcesForm
-                    data={accused.resources || []}
-                    onChange={(resources) => updateResources(accused.id, resources)}
+                    data={(accused.resources || []).filter(
+                      (r: any) => !r.id || (typeof r.id === "string" && r.id.startsWith("temp-")),
+                    )}
+                    onChange={(resources) => {
+                      const savedRes = (accused.resources || []).filter(
+                        (r: any) => r.id && typeof r.id === "string" && !r.id.startsWith("temp-"),
+                      )
+                      updateResources(accused.id, [...savedRes, ...resources])
+                    }}
+                    savedResources={(accused.resources || []).filter(
+                      (r: any) => r.id && typeof r.id === "string" && !r.id.startsWith("temp-"),
+                    )}
+                    onDeleteSavedResource={(resourceId) => deleteSavedResource(accused.id, resourceId)}
                   />
                 </div>
               </CardContent>

@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
 
-const DEV_BYPASS_AUTH = true
+const DEV_BYPASS_AUTH = false
 
 interface AuthGuardProps {
   children: React.ReactNode
