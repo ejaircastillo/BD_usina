@@ -539,13 +539,14 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
               })
 
+              // Solo guardar si tiene archivo o URL
               for (const resource of newVictimResources) {
-                if (resource.titulo || resource.url || resource.archivo_path) {
+                if (resource.url || resource.archivo_path) {
                   const resourceData = {
                     victima_id: victim.id,
                     hecho_id: hechoId,
                     tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                    titulo: resource.titulo || null,
+                    titulo: resource.titulo || resource.archivo_nombre || null,
                     url: resource.url || null,
                     fuente: resource.fuente || null,
                     descripcion: resource.descripcion || null,
@@ -766,14 +767,15 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
                   return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
                 })
+                // Solo guardar si tiene archivo o URL
                 for (const resource of newResources) {
-                  if (resource.titulo || resource.url || resource.archivo_path) {
+                  if (resource.url || resource.archivo_path) {
                     await supabase.from("recursos").insert([
                       {
                         imputado_id: accusedId,
                         hecho_id: hechoId,
-                        tipo: resource.tipo || null,
-                        titulo: resource.titulo || null,
+                        tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
+                        titulo: resource.titulo || resource.archivo_nombre || null,
                         url: resource.url || null,
                         fuente: resource.fuente || null,
                         descripcion: resource.descripcion || null,
@@ -821,7 +823,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 }
               }
 
-              // Insert all resources for new imputado
+              // Insert accused resources
               if (accused.resources && Array.isArray(accused.resources)) {
                 for (const resource of accused.resources) {
                   if (resource.titulo || resource.url || resource.archivo_path) {
@@ -922,8 +924,9 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
 
             return !hasRealUUID && (hasNoId || hasTempId || hasNumericId || hasNewFlag)
           })
+          // Solo guardar si tiene archivo o URL
           for (const resource of newResources) {
-            if (resource.titulo || resource.url || resource.archivo_path) {
+            if (resource.url || resource.archivo_path) {
               const resourceData = {
                 hecho_id: hechoId,
                 tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
