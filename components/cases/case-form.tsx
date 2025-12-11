@@ -891,7 +891,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               const resourceData = {
                 hecho_id: hechoId,
                 tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                titulo: resource.titulo || null,
+                titulo: resource.titulo || resource.archivo_nombre || null,
                 url: resource.url || null,
                 fuente: resource.fuente || null,
                 descripcion: resource.descripcion || null,
@@ -900,8 +900,12 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 archivo_tipo: resource.archivo_tipo || null,
                 archivo_size: resource.archivo_size ? Number(resource.archivo_size) : null,
               }
+              console.log("[v0] Saving resource:", resourceData)
               const { error: resourceError } = await supabase.from("recursos").insert([resourceData])
-              if (resourceError) throw resourceError
+              if (resourceError) {
+                console.log("[v0] Error saving resource:", resourceError)
+                throw resourceError
+              }
             }
           }
         }

@@ -174,6 +174,28 @@ export function ResourcesForm({ data = [], onChange, savedResources = [] }: Reso
     }
   }
 
+  const getResourceDisplayName = (resource: SavedResource): string => {
+    if (resource.titulo && resource.titulo.trim()) {
+      return resource.titulo
+    }
+    if (resource.archivo_nombre && resource.archivo_nombre.trim()) {
+      return resource.archivo_nombre
+    }
+    if (resource.url) {
+      try {
+        const urlObj = new URL(resource.url)
+        const pathParts = urlObj.pathname.split("/").filter(Boolean)
+        if (pathParts.length > 0) {
+          return decodeURIComponent(pathParts[pathParts.length - 1])
+        }
+        return urlObj.hostname
+      } catch {
+        return "Archivo sin nombre"
+      }
+    }
+    return "Archivo sin nombre"
+  }
+
   return (
     <div className="space-y-6">
       {savedResources.length > 0 && (
@@ -207,7 +229,7 @@ export function ResourcesForm({ data = [], onChange, savedResources = [] }: Reso
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-medium text-slate-900 truncate max-w-[200px]">
-                            {resource.titulo || resource.archivo_nombre || "Sin título"}
+                            {getResourceDisplayName(resource)}
                           </span>
                           <span className="text-xs text-slate-500">{getTipoLabel(resource.tipo)}</span>
                         </div>
@@ -217,24 +239,28 @@ export function ResourcesForm({ data = [], onChange, savedResources = [] }: Reso
                         {resource.archivo_size ? formatFileSize(resource.archivo_size) : "-"}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDownload(resource)}
-                          className="flex items-center gap-1 text-green-700 hover:text-green-800 hover:bg-green-100"
-                        >
-                          {resource.archivo_path ? (
-                            <>
-                              <Download className="w-4 h-4" />
-                              <span className="hidden sm:inline">Descargar</span>
-                            </>
-                          ) : (
-                            <>
-                              <ExternalLink className="w-4 h-4" />
-                              <span className="hidden sm:inline">Ver</span>
-                            </>
-                          )}
-                        </Button>
+                        {resource.archivo_path || resource.url ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownload(resource)}
+                            className="flex items-center gap-1 text-green-700 hover:text-green-800 hover:bg-green-100"
+                          >
+                            {resource.archivo_path ? (
+                              <>
+                                <Download className="w-4 h-4" />
+                                <span className="hidden sm:inline">Descargar</span>
+                              </>
+                            ) : (
+                              <>
+                                <ExternalLink className="w-4 h-4" />
+                                <span className="hidden sm:inline">Ver</span>
+                              </>
+                            )}
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-slate-400">Sin archivo</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
