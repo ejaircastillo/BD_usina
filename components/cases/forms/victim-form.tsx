@@ -16,7 +16,9 @@ interface VictimFormProps {
 
 export function VictimForm({ data, onChange, showDates = false }: VictimFormProps) {
   const { countries, isLoading: isLoadingCountries } = useCountries()
-  const { provincias, municipios, isLoadingProvincias, isLoadingMunicipios, fetchMunicipios } = useArgentinaGeo()
+  const { provincias, municipios, isLoadingProvincias, isLoadingMunicipios, fetchMunicipios } = useArgentinaGeo(
+    data.provinciaResidencia,
+  )
 
   const handleChange = (field: string, value: string) => {
     onChange({
