@@ -201,7 +201,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         }
       }
 
-      // If no victims found through انہوں, fallback to the single victim
+      // If no victims found throughانہوں, fallback to the single victim
       if (allVictims.length === 0) {
         const { data: victimData, error: victimError } = await supabase
           .from("victimas")
@@ -575,7 +575,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                     victima_id: victim.id,
                     hecho_id: hechoId,
                     tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                    titulo: resource.titulo || resource.archivo_nombre || null,
+                    titulo: resource.titulo || resource.archivo_nombre || "Sin título",
                     url: resource.url || null,
                     fuente: resource.fuente || null,
                     descripcion: resource.descripcion || null,
@@ -632,7 +632,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                       victima_id: newVictimData.id,
                       hecho_id: hechoId,
                       tipo: resource.tipo || null,
-                      titulo: resource.titulo || null,
+                      titulo: resource.titulo || resource.archivo_nombre || "Sin título",
                       url: resource.url || null,
                       fuente: resource.fuente || null,
                       descripcion: resource.descripcion || null,
@@ -827,7 +827,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                         imputado_id: accusedId,
                         hecho_id: hechoId,
                         tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                        titulo: resource.titulo || resource.archivo_nombre || null,
+                        titulo: resource.titulo || resource.archivo_nombre || "Sin título",
                         url: resource.url || null,
                         fuente: resource.fuente || null,
                         descripcion: resource.descripcion || null,
@@ -879,7 +879,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                         imputado_id: accusedId,
                         hecho_id: hechoId,
                         tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                        titulo: resource.titulo || resource.archivo_nombre || null,
+                        titulo: resource.titulo || resource.archivo_nombre || "Sin título",
                         url: resource.url || null,
                         fuente: resource.fuente || null,
                         descripcion: resource.descripcion || null,
@@ -978,7 +978,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 imputado_id: null,
                 victima_id: null,
                 tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                titulo: resource.titulo || resource.archivo_nombre || null,
+                titulo: resource.titulo || resource.archivo_nombre || "Sin título",
                 url: resource.url || null,
                 fuente: resource.fuente || null,
                 descripcion: resource.descripcion || null,
@@ -1073,7 +1073,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                     victima_id: victimData.id,
                     hecho_id: hechoId,
                     tipo: resource.tipo || null,
-                    titulo: resource.titulo || null,
+                    titulo: resource.titulo || resource.archivo_nombre || "Sin título",
                     url: resource.url || null,
                     fuente: resource.fuente || null,
                     descripcion: resource.descripcion || null,
@@ -1145,7 +1145,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                         imputado_id: accusedId,
                         hecho_id: hechoId,
                         tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                        titulo: resource.titulo || resource.archivo_nombre || null,
+                        titulo: resource.titulo || resource.archivo_nombre || "Sin título",
                         url: resource.url || null,
                         fuente: resource.fuente || null,
                         descripcion: resource.descripcion || null,
@@ -1204,7 +1204,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               const resourceData = {
                 hecho_id: hechoId,
                 tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                titulo: resource.titulo || null,
+                titulo: resource.titulo || resource.archivo_nombre || "Sin título",
                 url: resource.url || null,
                 fuente: resource.fuente || null,
                 descripcion: resource.descripcion || null,
