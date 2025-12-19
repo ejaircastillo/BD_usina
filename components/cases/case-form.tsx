@@ -659,7 +659,6 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             resumen_hecho: formData.incident.resumenHecho || null,
             tipo_crimen: formData.incident.tipoCrimen || null,
             tipo_arma: formData.incident.tipoArma || null,
-            estado_caso: formData.incident.estadoCaso || null,
           })
           .eq("id", hechoId!)
 
