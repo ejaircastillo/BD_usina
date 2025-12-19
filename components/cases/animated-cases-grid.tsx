@@ -186,6 +186,10 @@ export function AnimatedCasesGrid() {
           const victima = caso.victimas || {}
           const hecho = caso.hechos || {}
 
+          console.log(
+            `[v0] Caso ${victima.nombre_completo || "Sin nombre"} - estado: "${caso.estado}", estado_general: "${caso.estado_general}"`,
+          )
+
           const { data: seguimientoData, error: segError } = await supabase
             .from("seguimiento")
             .select("lista_contactos_familiares")
@@ -213,18 +217,22 @@ export function AnimatedCasesGrid() {
             }
           }
 
+          const finalStatus =
+            caso.estado_general && caso.estado_general.trim() !== ""
+              ? caso.estado_general
+              : caso.estado && caso.estado.trim() !== ""
+                ? caso.estado
+                : "En investigación"
+
+          console.log(`[v0] Caso ${victima.nombre_completo || "Sin nombre"} - status final: "${finalStatus}"`)
+
           return {
             id: caso.id,
             victimName: victima.nombre_completo || "Sin nombre",
             incidentDate: hecho.fecha_hecho || new Date().toISOString(),
             location: hecho.municipio || hecho.provincia || "No especificado",
             province: hecho.provincia || "No especificado",
-            status:
-              caso.estado_general && caso.estado_general.trim() !== ""
-                ? caso.estado_general
-                : caso.estado && caso.estado.trim() !== ""
-                  ? caso.estado
-                  : "En investigación",
+            status: finalStatus,
             familyContactName,
             familyRelationship,
             familyContactPhone,
@@ -233,6 +241,8 @@ export function AnimatedCasesGrid() {
           }
         }),
       )
+
+      console.log("[v0] Transformed cases sample:", transformedCases.slice(0, 2))
 
       setCases(transformedCases)
     } catch (err) {
