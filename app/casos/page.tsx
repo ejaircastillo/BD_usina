@@ -174,7 +174,7 @@ export default function CasosPage() {
 
           const { data: seguimientoData, error: segError } = await supabase
             .from("seguimiento")
-            .select("contacto_familia, parentesco_contacto, telefono_contacto")
+            .select("lista_contactos_familiares")
             .eq("hecho_id", caso.hecho_id)
             .order("created_at", { ascending: true })
             .limit(1)
@@ -185,7 +185,19 @@ export default function CasosPage() {
             console.log("[v0] Error fetching seguimiento:", segError)
           }
 
-          const followUp = seguimientoData || {}
+          let familyContactName = "No especificado"
+          let familyRelationship = ""
+          let familyContactPhone = "No especificado"
+
+          if (seguimientoData?.lista_contactos_familiares) {
+            const contactos = seguimientoData.lista_contactos_familiares as any[]
+            if (contactos && contactos.length > 0) {
+              const primerContacto = contactos[0]
+              familyContactName = primerContacto.nombre || "No especificado"
+              familyRelationship = primerContacto.parentesco || ""
+              familyContactPhone = primerContacto.telefono || "No especificado"
+            }
+          }
 
           return {
             id: caso.id,
@@ -194,9 +206,9 @@ export default function CasosPage() {
             location: hecho.municipio || "No especificado",
             province: hecho.provincia || "No especificado",
             status: caso.estado || caso.estado_general || "En investigación",
-            familyContactName: followUp.contacto_familia || "No especificado",
-            familyRelationship: followUp.parentesco_contacto || "",
-            familyContactPhone: followUp.telefono_contacto || "No especificado",
+            familyContactName,
+            familyRelationship,
+            familyContactPhone,
             hechoId: caso.hecho_id,
             totalVictimsInHecho: caso.hecho_id ? hechoVictimCounts[caso.hecho_id] : 1,
           }
