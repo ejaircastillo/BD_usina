@@ -157,6 +157,8 @@ export default function CasosPage() {
 
       if (casosError) throw casosError
 
+      console.log("[v0] Total casos fetched:", casosData?.length)
+
       // Group casos by hecho_id to count victims per incident
       const hechoVictimCounts: Record<string, number> = {}
       for (const caso of casosData || []) {
@@ -170,12 +172,20 @@ export default function CasosPage() {
           const victima = caso.victimas || {}
           const hecho = caso.hechos || {}
 
-          const { data: seguimientoData } = await supabase
+          const { data: seguimientoData, error: segError } = await supabase
             .from("seguimiento")
             .select("contacto_familia, parentesco_contacto, telefono_contacto")
             .eq("hecho_id", caso.hecho_id)
+            .order("created_at", { ascending: true })
             .limit(1)
-          const followUp = seguimientoData?.[0] || {}
+            .single()
+
+          console.log("[v0] Seguimiento for hecho_id", caso.hecho_id, ":", seguimientoData)
+          if (segError && segError.code !== "PGRST116") {
+            console.log("[v0] Error fetching seguimiento:", segError)
+          }
+
+          const followUp = seguimientoData || {}
 
           return {
             id: caso.id,
@@ -193,6 +203,7 @@ export default function CasosPage() {
         }),
       )
 
+      console.log("[v0] Transformed cases sample:", transformedCases.slice(0, 2))
       setCases(transformedCases)
     } catch (err) {
       console.error("Error fetching cases:", err)
