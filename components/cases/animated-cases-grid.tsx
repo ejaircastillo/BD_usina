@@ -149,6 +149,7 @@ export function AnimatedCasesGrid() {
         .select(`
           id,
           estado_general,
+          estado,
           hecho_id,
           victima_id,
           created_at,
@@ -179,12 +180,29 @@ export function AnimatedCasesGrid() {
           const victima = caso.victimas || {}
           const hecho = caso.hechos || {}
 
-          const { data: seguimientoData } = await supabase
+          const { data: seguimientoData, error: segError } = await supabase
             .from("seguimiento")
-            .select("contacto_familia, parentesco_contacto")
+            .select("lista_contactos_familiares")
             .eq("hecho_id", caso.hecho_id)
+            .order("created_at", { ascending: true })
             .limit(1)
-          const followUp = seguimientoData?.[0] || {}
+            .maybeSingle()
+
+          if (segError && segError.code !== "PGRST116") {
+            console.log("[v0] Error fetching seguimiento:", segError)
+          }
+
+          let familyContactName = "No especificado"
+          let familyRelationship = "Familiar"
+
+          if (seguimientoData?.lista_contactos_familiares) {
+            const contactos = seguimientoData.lista_contactos_familiares as any[]
+            if (contactos && contactos.length > 0) {
+              const primerContacto = contactos[0]
+              familyContactName = primerContacto.nombre || "No especificado"
+              familyRelationship = primerContacto.parentesco || "Familiar"
+            }
+          }
 
           return {
             id: caso.id,
@@ -192,9 +210,14 @@ export function AnimatedCasesGrid() {
             incidentDate: hecho.fecha_hecho || new Date().toISOString(),
             location: hecho.municipio || hecho.provincia || "No especificado",
             province: hecho.provincia || "No especificado",
-            status: caso.estado_general || "En investigación",
-            familyContactName: followUp.contacto_familia || "No especificado",
-            familyRelationship: followUp.parentesco_contacto || "Familiar",
+            status:
+              caso.estado_general && caso.estado_general.trim() !== ""
+                ? caso.estado_general
+                : caso.estado && caso.estado.trim() !== ""
+                  ? caso.estado
+                  : "En investigación",
+            familyContactName,
+            familyRelationship,
             hechoId: caso.hecho_id,
             totalVictimsInHecho: caso.hecho_id ? hechoVictimCounts[caso.hecho_id] : 1,
           }
