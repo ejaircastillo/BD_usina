@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, MapPin, User, Search, Loader2 } from "lucide-react"
+import { Calendar, MapPin, User, Search, Loader2, Users } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { formatDateUTC } from "@/lib/utils"
 
@@ -18,6 +18,8 @@ interface CaseData {
   familyContactName: string
   familyRelationship: string
   familyContactPhone: string
+  hechoId: string
+  totalVictimsInHecho: number
 }
 
 const getStatusColor = (status: string) => {
@@ -72,63 +74,89 @@ export function CasesGrid({ filters = {} }: CasesGridProps) {
       setIsLoading(true)
       setError(null)
 
-      const { data: victimData, error: victimError } = await supabase.from("victimas").select(`
+      const { data: casosData, error: casosError } = await supabase
+        .from("casos")
+        .select(`
           id,
-          nombre_completo,
-          provincia_residencia,
-          municipio_residencia
-        `)
-
-      if (victimError) throw victimError
-
-      // Get related data separately to avoid complex join issues
-      const { data: hechosData, error: hechosError } = await supabase.from("hechos").select(`
-          id,
+          estado_general,
+          estado,
+          hecho_id,
           victima_id,
-          fecha_hecho,
-          lugar_especifico,
-          provincia
+          created_at,
+          victimas (
+            id,
+            nombre_completo
+          ),
+          hechos (
+            id,
+            fecha_hecho,
+            municipio,
+            provincia
+          )
         `)
+        .order("created_at", { ascending: false })
 
-      if (hechosError) throw hechosError
+      if (casosError) throw casosError
 
-      const { data: seguimientoData, error: seguimientoError } = await supabase.from("seguimiento").select(`
-          hecho_id,
-          contacto_familia
-        `)
-
-      if (seguimientoError) throw seguimientoError
-
-      const { data: imputadosData, error: imputadosError } = await supabase.from("imputados").select(`
-          hecho_id,
-          estado_procesal
-        `)
-
-      if (imputadosError) throw imputadosError
-
-      const transformedCases: CaseData[] = victimData.map((victim: any) => {
-        // Find related hecho for this victim
-        const hecho = hechosData.find((h: any) => h.victima_id === victim.id)
-
-        // Find related seguimiento and imputado for this hecho
-        const seguimiento = hecho ? seguimientoData.find((s: any) => s.hecho_id === hecho.id) : null
-        const imputado = hecho ? imputadosData.find((i: any) => i.hecho_id === hecho.id) : null
-
-        // Parse family contact to extract name and relationship
-        const familyContactParts = seguimiento?.contacto_familia?.split(" - ") || ["", ""]
-
-        return {
-          id: victim.id,
-          victimName: victim.nombre_completo,
-          incidentDate: hecho?.fecha_hecho || new Date().toISOString(),
-          location: hecho?.lugar_especifico || "No especificado",
-          province: hecho?.provincia || "No especificado",
-          status: imputado?.estado_procesal || "En investigación",
-          familyContactName: familyContactParts[0] || "No especificado",
-          familyRelationship: familyContactParts[1] || "Familiar",
-          familyContactPhone: victim.provincia_residencia || "No especificado",
+      const hechoVictimCounts: Record<string, number> = {}
+      for (const caso of casosData || []) {
+        if (caso.hecho_id) {
+          hechoVictimCounts[caso.hecho_id] = (hechoVictimCounts[caso.hecho_id] || 0) + 1
         }
-      })
+      }
+
+      const transformedCases: CaseData[] = await Promise.all(
+        (casosData || []).map(async (caso: any) => {
+          const victima = caso.victimas || {}
+          const hecho = caso.hechos || {}
+
+          const { data: seguimientoData, error: segError } = await supabase
+            .from("seguimiento")
+            .select("lista_contactos_familiares")
+            .eq("hecho_id", caso.hecho_id)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle()
+
+          if (segError && segError.code !== "PGRST116") {
+            console.log("[v0] Error fetching seguimiento:", segError)
+          }
+
+          let familyContactName = "No especificado"
+          let familyRelationship = "Familiar"
+          let familyContactPhone = "No especificado"
+
+          if (seguimientoData?.lista_contactos_familiares) {
+            const contactos = seguimientoData.lista_contactos_familiares as any[]
+            if (contactos && contactos.length > 0) {
+              const primerContacto = contactos[0]
+              familyContactName = primerContacto.nombre || "No especificado"
+              familyRelationship = primerContacto.parentesco || "Familiar"
+              const telefono = primerContacto.telefono
+              familyContactPhone = telefono && telefono.trim() !== "" ? telefono : "No especificado"
+            }
+          }
+
+          return {
+            id: caso.id,
+            victimName: victima.nombre_completo || "Sin nombre",
+            incidentDate: hecho.fecha_hecho || new Date().toISOString(),
+            location: hecho.municipio || hecho.provincia || "No especificado",
+            province: hecho.provincia || "No especificado",
+            status:
+              caso.estado_general && caso.estado_general.trim() !== ""
+                ? caso.estado_general
+                : caso.estado && caso.estado.trim() !== ""
+                  ? caso.estado
+                  : "En investigación",
+            familyContactName,
+            familyRelationship,
+            familyContactPhone,
+            hechoId: caso.hecho_id,
+            totalVictimsInHecho: caso.hecho_id ? hechoVictimCounts[caso.hecho_id] : 1,
+          }
+        }),
+      )
 
       setCases(transformedCases)
     } catch (err) {
@@ -232,9 +260,6 @@ export function CasesGrid({ filters = {} }: CasesGridProps) {
       <div className="mb-6">
         <p className="text-sm text-slate-600">
           Mostrando {filteredCases.length} de {cases.length} casos
-          {Object.keys(filters).some((key) => filters[key as keyof typeof filters]) && (
-            <span className="ml-2 text-slate-500">(filtrados)</span>
-          )}
         </p>
       </div>
 
@@ -242,14 +267,12 @@ export function CasesGrid({ filters = {} }: CasesGridProps) {
         {filteredCases.map((case_) => (
           <Link key={case_.id} href={`/casos/${case_.id}`}>
             <Card className="h-full hover:shadow-lg transition-shadow duration-200 border-slate-200 hover:border-slate-300 cursor-pointer">
-              <CardHeader>
-                <h3 className="font-semibold text-lg text-slate-900 font-heading mb-2 line-clamp-2">
-                  {case_.victimName}
-                </h3>
-              </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div>
+                    <h3 className="font-semibold text-lg text-slate-900 font-heading mb-2 line-clamp-2">
+                      {case_.victimName}
+                    </h3>
                     <Badge className={`text-xs ${getStatusColor(case_.status)}`}>{case_.status}</Badge>
                   </div>
 
@@ -275,10 +298,14 @@ export function CasesGrid({ filters = {} }: CasesGridProps) {
                       <span className="w-4 h-4 text-slate-400 text-center">📞</span>
                       <span className="line-clamp-1 font-mono text-xs">{case_.familyContactPhone}</span>
                     </div>
+
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-slate-400" />
+                      <span className="line-clamp-1">{case_.totalVictimsInHecho} víctimas</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
-              <CardFooter>{/* Additional footer content can be added here */}</CardFooter>
             </Card>
           </Link>
         ))}

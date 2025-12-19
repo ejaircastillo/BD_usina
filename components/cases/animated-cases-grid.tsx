@@ -16,6 +16,7 @@ interface CaseData {
   status: string
   familyContactName: string
   familyRelationship: string
+  familyContactPhone: string
   hechoId: string
   totalVictimsInHecho: number
 }
@@ -74,6 +75,11 @@ function CaseCard({ case: caseData }: CaseCardProps) {
                   {caseData.familyContactName}
                   {caseData.familyRelationship && ` - ${caseData.familyRelationship}`}
                 </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 text-blue-600 text-center">📞</span>
+                <span className="line-clamp-1 font-mono text-xs">{caseData.familyContactPhone}</span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -194,6 +200,7 @@ export function AnimatedCasesGrid() {
 
           let familyContactName = "No especificado"
           let familyRelationship = "Familiar"
+          let familyContactPhone = "No especificado"
 
           if (seguimientoData?.lista_contactos_familiares) {
             const contactos = seguimientoData.lista_contactos_familiares as any[]
@@ -201,6 +208,8 @@ export function AnimatedCasesGrid() {
               const primerContacto = contactos[0]
               familyContactName = primerContacto.nombre || "No especificado"
               familyRelationship = primerContacto.parentesco || "Familiar"
+              const telefono = primerContacto.telefono
+              familyContactPhone = telefono && telefono.trim() !== "" ? telefono : "No especificado"
             }
           }
 
@@ -218,6 +227,7 @@ export function AnimatedCasesGrid() {
                   : "En investigación",
             familyContactName,
             familyRelationship,
+            familyContactPhone,
             hechoId: caso.hecho_id,
             totalVictimsInHecho: caso.hecho_id ? hechoVictimCounts[caso.hecho_id] : 1,
           }
