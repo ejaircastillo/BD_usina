@@ -178,7 +178,7 @@ export default function CasosPage() {
             .eq("hecho_id", caso.hecho_id)
             .order("created_at", { ascending: true })
             .limit(1)
-            .single()
+            .maybeSingle()
 
           console.log("[v0] Seguimiento for hecho_id", caso.hecho_id, ":", seguimientoData)
           if (segError && segError.code !== "PGRST116") {
