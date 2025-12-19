@@ -195,7 +195,7 @@ export default function CasosPage() {
               const primerContacto = contactos[0]
               familyContactName = primerContacto.nombre || "No especificado"
               familyRelationship = primerContacto.parentesco || ""
-              familyContactPhone = primerContacto.telefono || "No especificado"
+              familyContactPhone = (primerContacto.telefono && primerContacto.telefono.trim()) || "No especificado"
             }
           }
 
@@ -205,7 +205,7 @@ export default function CasosPage() {
             incidentDate: hecho.fecha_hecho || new Date().toISOString(),
             location: hecho.municipio || "No especificado",
             province: hecho.provincia || "No especificado",
-            status: caso.estado || caso.estado_general || "En investigación",
+            status: caso.estado_general || caso.estado || "En investigación",
             familyContactName,
             familyRelationship,
             familyContactPhone,
