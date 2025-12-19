@@ -139,6 +139,7 @@ export default function CasosPage() {
         .select(`
           id,
           estado_general,
+          estado,
           hecho_id,
           victima_id,
           victimas (
@@ -182,7 +183,7 @@ export default function CasosPage() {
             incidentDate: hecho.fecha_hecho || new Date().toISOString(),
             location: hecho.municipio || "No especificado",
             province: hecho.provincia || "No especificado",
-            status: caso.estado_general || "En investigación",
+            status: caso.estado || caso.estado_general || "En investigación",
             familyContactName: followUp.contacto_familia || "No especificado",
             familyRelationship: followUp.parentesco_contacto || "",
             familyContactPhone: followUp.telefono_contacto || "No especificado",

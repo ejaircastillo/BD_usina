@@ -57,6 +57,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
       resumenHecho: "",
       tipoCrimen: "",
       tipoArma: "",
+      estadoCaso: "En investigación",
     },
     accused: [],
     followUp: {
@@ -398,6 +399,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           resumenHecho: hechoData?.resumen_hecho || "",
           tipoCrimen: hechoData?.tipo_crimen || "",
           tipoArma: hechoData?.tipo_arma || "",
+          estadoCaso: casoData?.estado || "En investigación",
         },
         accused: imputadosWithResources,
         followUp: {
@@ -615,6 +617,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               {
                 victima_id: newVictimData.id,
                 hecho_id: hechoId,
+                estado: formData.incident.estadoCaso || "En investigación",
                 estado_general: "En investigación",
               },
             ])
@@ -656,10 +659,22 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             resumen_hecho: formData.incident.resumenHecho || null,
             tipo_crimen: formData.incident.tipoCrimen || null,
             tipo_arma: formData.incident.tipoArma || null,
+            estado_caso: formData.incident.estadoCaso || null,
           })
           .eq("id", hechoId!)
 
         if (incidentError) throw incidentError
+
+        if (hechoId) {
+          const { error: estadoError } = await supabase
+            .from("casos")
+            .update({
+              estado: formData.incident.estadoCaso || "En investigación",
+            })
+            .eq("hecho_id", hechoId)
+
+          if (estadoError) console.error("Error updating case status:", estadoError)
+        }
 
         if (formData.accused && Array.isArray(formData.accused)) {
           // Get current imputados IDs from DB to detect deletions
@@ -985,6 +1000,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               resumen_hecho: formData.incident.resumenHecho || null,
               tipo_crimen: formData.incident.tipoCrimen || null,
               tipo_arma: formData.incident.tipoArma || null,
+              estado_caso: formData.incident.estadoCaso || null,
             },
           ])
           .select()
@@ -1025,6 +1041,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             {
               victima_id: victimData.id,
               hecho_id: hechoId,
+              estado: formData.incident.estadoCaso || "En investigación",
               estado_general: "En investigación",
             },
           ])
