@@ -218,10 +218,10 @@ export function AnimatedCasesGrid() {
           }
 
           const finalStatus =
-            caso.estado_general && caso.estado_general.trim() !== ""
-              ? caso.estado_general
-              : caso.estado && caso.estado.trim() !== ""
-                ? caso.estado
+            caso.estado && caso.estado.trim() !== ""
+              ? caso.estado
+              : caso.estado_general && caso.estado_general.trim() !== ""
+                ? caso.estado_general
                 : "En investigación"
 
           console.log(`[v0] Caso ${victima.nombre_completo || "Sin nombre"} - status final: "${finalStatus}"`)
