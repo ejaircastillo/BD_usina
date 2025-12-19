@@ -201,7 +201,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         }
       }
 
-      // If no victims found through casos, fallback to the single victim
+      // If no victims found through انہوں, fallback to the single victim
       if (allVictims.length === 0) {
         const { data: victimData, error: victimError } = await supabase
           .from("victimas")
@@ -975,6 +975,8 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             if (resource.url || resource.archivo_path) {
               const resourceData = {
                 hecho_id: hechoId,
+                imputado_id: null,
+                victima_id: null,
                 tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
                 titulo: resource.titulo || resource.archivo_nombre || null,
                 url: resource.url || null,
