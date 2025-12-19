@@ -57,6 +57,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
       resumenHecho: "",
       tipoCrimen: "",
       tipoArma: "",
+      estadoCaso: "En investigación",
     },
     accused: [],
     followUp: {
@@ -200,7 +201,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
         }
       }
 
-      // If no victims found through casos, fallback to the single victim
+      // If no victims found throughانہوں, fallback to the single victim
       if (allVictims.length === 0) {
         const { data: victimData, error: victimError } = await supabase
           .from("victimas")
@@ -398,6 +399,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           resumenHecho: hechoData?.resumen_hecho || "",
           tipoCrimen: hechoData?.tipo_crimen || "",
           tipoArma: hechoData?.tipo_arma || "",
+          estadoCaso: casoData?.estado || "En investigación",
         },
         accused: imputadosWithResources,
         followUp: {
@@ -408,7 +410,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           abogadoQuerellante: seguimientoData?.abogado_querellante || "",
           amicusCuriae: seguimientoData?.amicus_curiae || false,
           comoLlegoCaso: seguimientoData?.como_llego_caso || "",
-          primerContacto: seguimientoData?.primer_contacto || "",
+          primerContacto: seguimientoData?.primer_contacto || false,
           notasSeguimiento: seguimientoData?.notas_seguimiento || "",
           emailContacto: seguimientoData?.email_contacto || "",
           direccionContacto: seguimientoData?.direccion_contacto || "",
@@ -573,7 +575,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                     victima_id: victim.id,
                     hecho_id: hechoId,
                     tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                    titulo: resource.titulo || resource.archivo_nombre || null,
+                    titulo: resource.titulo || resource.archivo_nombre || "Sin título",
                     url: resource.url || null,
                     fuente: resource.fuente || null,
                     descripcion: resource.descripcion || null,
@@ -615,6 +617,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               {
                 victima_id: newVictimData.id,
                 hecho_id: hechoId,
+                estado: formData.incident.estadoCaso || "En investigación",
                 estado_general: "En investigación",
               },
             ])
@@ -629,7 +632,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                       victima_id: newVictimData.id,
                       hecho_id: hechoId,
                       tipo: resource.tipo || null,
-                      titulo: resource.titulo || null,
+                      titulo: resource.titulo || resource.archivo_nombre || "Sin título",
                       url: resource.url || null,
                       fuente: resource.fuente || null,
                       descripcion: resource.descripcion || null,
@@ -660,6 +663,17 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           .eq("id", hechoId!)
 
         if (incidentError) throw incidentError
+
+        if (hechoId) {
+          const { error: estadoError } = await supabase
+            .from("casos")
+            .update({
+              estado: formData.incident.estadoCaso || "En investigación",
+            })
+            .eq("hecho_id", hechoId)
+
+          if (estadoError) console.error("Error updating case status:", estadoError)
+        }
 
         if (formData.accused && Array.isArray(formData.accused)) {
           // Get current imputados IDs from DB to detect deletions
@@ -732,7 +746,11 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 // Delete instances removed from form
                 const instanciasToDelete = existingInstanciaIds.filter((id) => !formInstanciaIds.includes(id))
                 for (const idToDelete of instanciasToDelete) {
-                  await supabase.from("instancias_judiciales").delete().eq("id", idToDelete)
+                  try {
+                    await supabase.from("instancias_judiciales").delete().eq("id", idToDelete)
+                  } catch (e) {
+                    console.error("[v0] Error deleting instancia:", e)
+                  }
                 }
 
                 // Update or insert instancias
@@ -747,38 +765,45 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                     hasInstanciaId,
                   })
 
-                  if (hasInstanciaId) {
-                    // Update existing instancia
-                    const { error: updateError } = await supabase
-                      .from("instancias_judiciales")
-                      .update({
-                        numero_causa: instancia.numeroCausa || null,
-                        fiscal: instancia.fiscalFiscalia || null,
-                        fiscalia: instancia.fiscalFiscalia || null,
-                        caratula: instancia.caratula || null,
-                        orden_nivel: instancia.ordenNivel || null,
-                      })
-                      .eq("id", instancia.id)
+                  try {
+                    if (hasInstanciaId) {
+                      // Update existing instancia
+                      const { error: updateError } = await supabase
+                        .from("instancias_judiciales")
+                        .update({
+                          numero_causa: instancia.numeroCausa || null,
+                          fiscal: instancia.fiscalFiscalia || null,
+                          fiscalia: instancia.fiscalFiscalia || null,
+                          caratula: instancia.caratula || null,
+                          orden_nivel: instancia.ordenNivel || null,
+                        })
+                        .eq("id", instancia.id)
 
-                    if (updateError) {
-                      console.log("[v0] Error updating instancia:", updateError)
-                    }
-                  } else {
-                    // Insert new instancia
-                    const { error: insertError } = await supabase.from("instancias_judiciales").insert([
-                      {
-                        imputado_id: accusedId,
-                        numero_causa: instancia.numeroCausa || null,
-                        fiscal: instancia.fiscalFiscalia || null,
-                        fiscalia: instancia.fiscalFiscalia || null,
-                        caratula: instancia.caratula || null,
-                        orden_nivel: instancia.ordenNivel || null,
-                      },
-                    ])
+                      if (updateError) {
+                        console.error("[v0] Error updating instancia:", updateError)
+                        throw updateError
+                      }
+                    } else {
+                      // Insert new instancia
+                      const { error: insertError } = await supabase.from("instancias_judiciales").insert([
+                        {
+                          imputado_id: accusedId,
+                          numero_causa: instancia.numeroCausa || null,
+                          fiscal: instancia.fiscalFiscalia || null,
+                          fiscalia: instancia.fiscalFiscalia || null,
+                          caratula: instancia.caratula || null,
+                          orden_nivel: instancia.ordenNivel || null,
+                        },
+                      ])
 
-                    if (insertError) {
-                      console.log("[v0] Error inserting instancia:", insertError)
+                      if (insertError) {
+                        console.error("[v0] Error inserting instancia:", insertError)
+                        throw insertError
+                      }
                     }
+                  } catch (error) {
+                    console.error("[v0] Error in instancia operation:", error)
+                    // Continue with other instancias instead of failing completely
                   }
                 }
               }
@@ -802,7 +827,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                         imputado_id: accusedId,
                         hecho_id: hechoId,
                         tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                        titulo: resource.titulo || resource.archivo_nombre || null,
+                        titulo: resource.titulo || resource.archivo_nombre || "Sin título",
                         url: resource.url || null,
                         fuente: resource.fuente || null,
                         descripcion: resource.descripcion || null,
@@ -854,7 +879,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                         imputado_id: accusedId,
                         hecho_id: hechoId,
                         tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                        titulo: resource.titulo || resource.archivo_nombre || null,
+                        titulo: resource.titulo || resource.archivo_nombre || "Sin título",
                         url: resource.url || null,
                         fuente: resource.fuente || null,
                         descripcion: resource.descripcion || null,
@@ -950,8 +975,10 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             if (resource.url || resource.archivo_path) {
               const resourceData = {
                 hecho_id: hechoId,
+                imputado_id: null,
+                victima_id: null,
                 tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                titulo: resource.titulo || resource.archivo_nombre || null,
+                titulo: resource.titulo || resource.archivo_nombre || "Sin título",
                 url: resource.url || null,
                 fuente: resource.fuente || null,
                 descripcion: resource.descripcion || null,
@@ -985,6 +1012,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               resumen_hecho: formData.incident.resumenHecho || null,
               tipo_crimen: formData.incident.tipoCrimen || null,
               tipo_arma: formData.incident.tipoArma || null,
+              estado_caso: formData.incident.estadoCaso || null,
             },
           ])
           .select()
@@ -1025,6 +1053,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
             {
               victima_id: victimData.id,
               hecho_id: hechoId,
+              estado: formData.incident.estadoCaso || "En investigación",
               estado_general: "En investigación",
             },
           ])
@@ -1044,7 +1073,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                     victima_id: victimData.id,
                     hecho_id: hechoId,
                     tipo: resource.tipo || null,
-                    titulo: resource.titulo || null,
+                    titulo: resource.titulo || resource.archivo_nombre || "Sin título",
                     url: resource.url || null,
                     fuente: resource.fuente || null,
                     descripcion: resource.descripcion || null,
@@ -1116,7 +1145,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                         imputado_id: accusedId,
                         hecho_id: hechoId,
                         tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                        titulo: resource.titulo || resource.archivo_nombre || null,
+                        titulo: resource.titulo || resource.archivo_nombre || "Sin título",
                         url: resource.url || null,
                         fuente: resource.fuente || null,
                         descripcion: resource.descripcion || null,
@@ -1175,7 +1204,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
               const resourceData = {
                 hecho_id: hechoId,
                 tipo: resource.tipo && resource.tipo !== "" ? resource.tipo : "other",
-                titulo: resource.titulo || null,
+                titulo: resource.titulo || resource.archivo_nombre || "Sin título",
                 url: resource.url || null,
                 fuente: resource.fuente || null,
                 descripcion: resource.descripcion || null,

@@ -22,6 +22,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   useEffect(() => {
     if (DEV_BYPASS_AUTH) {
+      console.log("[v0] Modo DEV activo - Bypass de autenticación habilitado")
       setIsAuthenticated(true)
       return
     }

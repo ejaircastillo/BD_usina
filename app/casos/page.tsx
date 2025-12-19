@@ -139,6 +139,7 @@ export default function CasosPage() {
         .select(`
           id,
           estado_general,
+          estado,
           hecho_id,
           victima_id,
           victimas (
@@ -156,6 +157,8 @@ export default function CasosPage() {
 
       if (casosError) throw casosError
 
+      console.log("[v0] Total casos fetched:", casosData?.length)
+
       // Group casos by hecho_id to count victims per incident
       const hechoVictimCounts: Record<string, number> = {}
       for (const caso of casosData || []) {
@@ -169,12 +172,32 @@ export default function CasosPage() {
           const victima = caso.victimas || {}
           const hecho = caso.hechos || {}
 
-          const { data: seguimientoData } = await supabase
+          const { data: seguimientoData, error: segError } = await supabase
             .from("seguimiento")
-            .select("contacto_familia, parentesco_contacto, telefono_contacto")
+            .select("lista_contactos_familiares")
             .eq("hecho_id", caso.hecho_id)
+            .order("created_at", { ascending: true })
             .limit(1)
-          const followUp = seguimientoData?.[0] || {}
+            .maybeSingle()
+
+          console.log("[v0] Seguimiento for hecho_id", caso.hecho_id, ":", seguimientoData)
+          if (segError && segError.code !== "PGRST116") {
+            console.log("[v0] Error fetching seguimiento:", segError)
+          }
+
+          let familyContactName = "No especificado"
+          let familyRelationship = ""
+          let familyContactPhone = "No especificado"
+
+          if (seguimientoData?.lista_contactos_familiares) {
+            const contactos = seguimientoData.lista_contactos_familiares as any[]
+            if (contactos && contactos.length > 0) {
+              const primerContacto = contactos[0]
+              familyContactName = primerContacto.nombre || "No especificado"
+              familyRelationship = primerContacto.parentesco || ""
+              familyContactPhone = (primerContacto.telefono && primerContacto.telefono.trim()) || "No especificado"
+            }
+          }
 
           return {
             id: caso.id,
@@ -182,16 +205,22 @@ export default function CasosPage() {
             incidentDate: hecho.fecha_hecho || new Date().toISOString(),
             location: hecho.municipio || "No especificado",
             province: hecho.provincia || "No especificado",
-            status: caso.estado_general || "En investigación",
-            familyContactName: followUp.contacto_familia || "No especificado",
-            familyRelationship: followUp.parentesco_contacto || "",
-            familyContactPhone: followUp.telefono_contacto || "No especificado",
+            status:
+              caso.estado && caso.estado.trim() !== ""
+                ? caso.estado
+                : caso.estado_general && caso.estado_general.trim() !== ""
+                  ? caso.estado_general
+                  : "En investigación",
+            familyContactName,
+            familyRelationship,
+            familyContactPhone,
             hechoId: caso.hecho_id,
             totalVictimsInHecho: caso.hecho_id ? hechoVictimCounts[caso.hecho_id] : 1,
           }
         }),
       )
 
+      console.log("[v0] Transformed cases sample:", transformedCases.slice(0, 2))
       setCases(transformedCases)
     } catch (err) {
       console.error("Error fetching cases:", err)

@@ -570,9 +570,11 @@ export function AccusedForm({ data = [], onChange }: AccusedFormProps) {
                               </div>
 
                               <div className="space-y-1">
-                                <Label className="text-xs font-medium text-slate-600">Fiscal / Fiscalía</Label>
+                                <Label className="text-xs font-medium text-slate-600">
+                                  Fiscalía o tribunal/ operadores judiciales
+                                </Label>
                                 <Input
-                                  placeholder="Nombre del fiscal o fiscalía"
+                                  placeholder="Nombre del fiscal, fiscalía o tribunal"
                                   value={instancia.fiscalFiscalia || ""}
                                   onChange={(e) =>
                                     updateInstanciaJudicial(accused.id, instIndex, "fiscalFiscalia", e.target.value)

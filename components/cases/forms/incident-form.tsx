@@ -17,6 +17,7 @@ interface IncidentFormProps {
     resumenHecho?: string
     tipoCrimen?: string
     tipoArma?: string
+    estadoCaso?: string
   }
   onChange: (data: any) => void
   hideDates?: boolean
@@ -54,6 +55,8 @@ const locationTypes = [
   "Otro",
 ]
 
+const caseStatuses = ["En investigación", "Elevado a Juicio", "Sentencia", "Cerrado/Archivado"]
+
 export function IncidentForm({ data, onChange, hideDates = false }: IncidentFormProps) {
   const { provincias, municipios, loadingProvincias, loadingMunicipios, errorProvincias } = useArgentinaGeo(
     data.provincia,
@@ -76,6 +79,31 @@ export function IncidentForm({ data, onChange, hideDates = false }: IncidentForm
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
+      <div>
+        <h3 className="text-lg font-semibold text-slate-900 font-heading mb-4">Estado del Caso</h3>
+        <div className="grid grid-cols-1 gap-4">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-slate-700">Estado Actual</Label>
+            <Select
+              value={data.estadoCaso || "En investigación"}
+              onValueChange={(value) => handleChange("estadoCaso", value)}
+            >
+              <SelectTrigger className="border-slate-300">
+                <SelectValue placeholder="Seleccionar estado del caso" />
+              </SelectTrigger>
+              <SelectContent>
+                {caseStatuses.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-slate-500">Indica la etapa actual del proceso judicial del caso</p>
+          </div>
+        </div>
+      </div>
+
       <div>
         <h3 className="text-lg font-semibold text-slate-900 font-heading mb-4">Clasificación del Hecho</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

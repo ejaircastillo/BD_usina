@@ -166,6 +166,7 @@ interface CaseData {
   recursos: Recurso[]
   hermanos_hecho: HermanoHecho[]
   estado_general: string | null
+  estado: string | null
 }
 
 const getStatusColor = (status: string) => {
@@ -348,7 +349,7 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
       // Strategy 1: Find by caso.id (new structure)
       const { data: casosArray } = await supabase
         .from("casos")
-        .select("id, victima_id, hecho_id, estado_general")
+        .select("id, victima_id, hecho_id, estado_general, estado")
         .eq("id", caseId)
 
       if (casosArray && casosArray.length > 0) {
@@ -387,21 +388,23 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
 
     let casoId = victimaData.id
     let estadoGeneral = "En investigación"
+    let estado = null
 
     if (hechoData) {
       const { data: casosArray } = await supabase
         .from("casos")
-        .select("id, estado_general")
+        .select("id, estado_general, estado")
         .eq("hecho_id", hechoData.id)
         .limit(1)
 
       if (casosArray && casosArray.length > 0) {
         casoId = casosArray[0].id
         estadoGeneral = casosArray[0].estado_general || estadoGeneral
+        estado = casosArray[0].estado
       }
     }
 
-    await loadFullCaseData(casoId, victimaData, hechoData, estadoGeneral)
+    await loadFullCaseData(casoId, victimaData, hechoData, estadoGeneral, estado)
   }
 
   const loadLegacyCaseFromHecho = async (hechoData: any) => {
@@ -409,19 +412,21 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
 
     let casoId = victimaData?.id || hechoData.id
     let estadoGeneral = "En investigación"
+    let estado = null
 
     const { data: casosArray } = await supabase
       .from("casos")
-      .select("id, estado_general")
+      .select("id, estado_general, estado")
       .eq("hecho_id", hechoData.id)
       .limit(1)
 
     if (casosArray && casosArray.length > 0) {
       casoId = casosArray[0].id
       estadoGeneral = casosArray[0].estado_general || estadoGeneral
+      estado = casosArray[0].estado
     }
 
-    await loadFullCaseData(casoId, victimaData, hechoData, estadoGeneral)
+    await loadFullCaseData(casoId, victimaData, hechoData, estadoGeneral, estado)
   }
 
   const loadCaseWithData = async (casoData: any) => {
@@ -439,10 +444,16 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
       hechoData = hechosArray?.[0] || null
     }
 
-    await loadFullCaseData(casoData.id, victimaData, hechoData, casoData.estado_general)
+    await loadFullCaseData(casoData.id, victimaData, hechoData, casoData.estado_general, casoData.estado)
   }
 
-  const loadFullCaseData = async (casoId: string, victimaData: any, hechoData: any, estadoGeneral: string | null) => {
+  const loadFullCaseData = async (
+    casoId: string,
+    victimaData: any,
+    hechoData: any,
+    estadoGeneral: string | null,
+    estado: string | null = null,
+  ) => {
     // Get imputados
     let imputadosData: Imputado[] = []
     if (hechoData?.id) {
@@ -519,6 +530,7 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
       recursos: uniqueRecursos,
       hermanos_hecho: hermanosHecho,
       estado_general: estadoGeneral,
+      estado: estado,
     })
   }
 
@@ -567,7 +579,7 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
     )
   }
 
-  const { victima, hecho, imputados, seguimiento, recursos, hermanos_hecho, estado_general } = caseData
+  const { victima, hecho, imputados, seguimiento, recursos, hermanos_hecho, estado_general, estado } = caseData
 
   const getVictimResources = () => recursos.filter((r) => r.victima_id === victima.id && !r.imputado_id)
   const getImputadoResources = (imputadoId: string) => recursos.filter((r) => r.imputado_id === imputadoId)
@@ -587,8 +599,10 @@ export function CaseDetailContent({ caseId }: CaseDetailContentProps) {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">{victima.nombre_completo || "Víctima sin nombre"}</h1>
             <div className="flex items-center gap-2 mt-1">
-              {estado_general && (
-                <Badge className={`text-xs ${getStatusColor(estado_general)}`}>{estado_general}</Badge>
+              {(estado || estado_general) && (
+                <Badge className={`text-xs ${getStatusColor(estado || estado_general || "")}`}>
+                  {estado || estado_general}
+                </Badge>
               )}
               {hecho?.tipo_crimen && (
                 <Badge variant="outline" className="text-xs">

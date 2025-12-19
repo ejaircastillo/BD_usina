@@ -56,15 +56,17 @@ export function Header() {
             </nav>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2 border-blue-200 text-blue-700 hover:bg-blue-50 bg-transparent"
-            onClick={handleLogout}
-          >
-            <LogOut className="w-4 h-4" />
-            Cerrar Sesión
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 border-blue-200 text-blue-700 hover:bg-blue-50 bg-transparent"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-4 h-4" />
+              Cerrar Sesión
+            </Button>
+          </div>
         </div>
       </div>
     </header>
