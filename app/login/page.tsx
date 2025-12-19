@@ -10,9 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Mail, Loader2, CheckCircle, TestTube } from "lucide-react"
+import { Mail, Loader2, CheckCircle } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
-import { isMockAuthEnabled } from "@/lib/auth/mock-user"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -26,7 +25,6 @@ export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
-  const isMockMode = isMockAuthEnabled()
 
   const hasAuthParams = useMemo(() => {
     const code = searchParams.get("code")
@@ -38,12 +36,6 @@ export default function LoginPage() {
   }, [searchParams])
 
   useEffect(() => {
-    if (isMockMode) {
-      console.log("[v0] Mock mode activo - Redirigiendo a la app")
-      router.push("/")
-      return
-    }
-
     if (isRedirecting || hasRedirectedRef.current) {
       return
     }
@@ -143,7 +135,7 @@ export default function LoginPage() {
       if (timeoutId) clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
-  }, [supabase, hasAuthParams, router, isRedirecting, isMockMode])
+  }, [supabase, hasAuthParams, router, isRedirecting])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -171,11 +163,6 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const handleMockLogin = () => {
-    console.log("[v0] Ingresando con usuario mock")
-    router.push("/")
   }
 
   if (authState === "checking" || authState === "processing_token") {
@@ -226,33 +213,6 @@ export default function LoginPage() {
           </CardHeader>
 
           <CardContent className="space-y-6 pb-8">
-            {isMockMode && (
-              <div className="space-y-3">
-                <Alert className="border-amber-200 bg-amber-50">
-                  <TestTube className="h-4 w-4 text-amber-600" />
-                  <AlertDescription className="text-amber-700 ml-2">
-                    Modo Desarrollo Activo - Acceso directo sin autenticación
-                  </AlertDescription>
-                </Alert>
-                <Button
-                  type="button"
-                  onClick={handleMockLogin}
-                  className="w-full h-12 bg-amber-600 hover:bg-amber-700 text-white font-medium transition-colors"
-                >
-                  <TestTube className="mr-2 h-4 w-4" />
-                  Entrar con Usuario de Prueba
-                </Button>
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-slate-200" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white px-2 text-slate-500">O usa login real</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {emailSent ? (
               <div className="space-y-4">
                 <Alert className="border-green-200 bg-green-50">

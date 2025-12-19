@@ -3,24 +3,15 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { LogOut, BarChart3, TestTube } from "lucide-react"
+import { LogOut, BarChart3 } from "lucide-react"
 import Image from "next/image"
 import { createClient } from "@/lib/supabase/client"
-import { getCurrentMockUser, isMockAuthEnabled } from "@/lib/auth/mock-user"
 
 export function Header() {
   const pathname = usePathname()
   const supabase = createClient()
-  const isMockMode = isMockAuthEnabled()
-  const mockUser = getCurrentMockUser()
 
   const handleLogout = async () => {
-    if (isMockMode) {
-      console.log("[v0] Mock mode - Simulando logout")
-      window.location.href = "/login"
-      return
-    }
-
     await supabase.auth.signOut()
     window.location.href = "/login"
   }
@@ -66,13 +57,6 @@ export function Header() {
           </div>
 
           <div className="flex items-center gap-3">
-            {isMockMode && mockUser && (
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-md">
-                <TestTube className="w-4 h-4 text-amber-600" />
-                <span className="text-xs font-medium text-amber-700">Modo Desarrollo: {mockUser.email}</span>
-              </div>
-            )}
-
             <Button
               variant="outline"
               size="sm"
