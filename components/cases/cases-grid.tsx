@@ -144,10 +144,10 @@ export function CasesGrid({ filters = {} }: CasesGridProps) {
             location: hecho.municipio || hecho.provincia || "No especificado",
             province: hecho.provincia || "No especificado",
             status:
-              caso.estado_general && caso.estado_general.trim() !== ""
-                ? caso.estado_general
-                : caso.estado && caso.estado.trim() !== ""
-                  ? caso.estado
+              caso.estado && caso.estado.trim() !== ""
+                ? caso.estado
+                : caso.estado_general && caso.estado_general.trim() !== ""
+                  ? caso.estado_general
                   : "En investigación",
             familyContactName,
             familyRelationship,
