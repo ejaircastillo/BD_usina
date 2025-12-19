@@ -205,7 +205,12 @@ export default function CasosPage() {
             incidentDate: hecho.fecha_hecho || new Date().toISOString(),
             location: hecho.municipio || "No especificado",
             province: hecho.provincia || "No especificado",
-            status: caso.estado_general || caso.estado || "En investigación",
+            status:
+              caso.estado_general && caso.estado_general.trim() !== ""
+                ? caso.estado_general
+                : caso.estado && caso.estado.trim() !== ""
+                  ? caso.estado
+                  : "En investigación",
             familyContactName,
             familyRelationship,
             familyContactPhone,
