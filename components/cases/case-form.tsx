@@ -410,7 +410,7 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
           abogadoQuerellante: seguimientoData?.abogado_querellante || "",
           amicusCuriae: seguimientoData?.amicus_curiae || false,
           comoLlegoCaso: seguimientoData?.como_llego_caso || "",
-          primerContacto: seguimientoData?.primer_contacto || "",
+          primerContacto: seguimientoData?.primer_contacto || false,
           notasSeguimiento: seguimientoData?.notas_seguimiento || "",
           emailContacto: seguimientoData?.email_contacto || "",
           direccionContacto: seguimientoData?.direccion_contacto || "",
@@ -746,7 +746,11 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                 // Delete instances removed from form
                 const instanciasToDelete = existingInstanciaIds.filter((id) => !formInstanciaIds.includes(id))
                 for (const idToDelete of instanciasToDelete) {
-                  await supabase.from("instancias_judiciales").delete().eq("id", idToDelete)
+                  try {
+                    await supabase.from("instancias_judiciales").delete().eq("id", idToDelete)
+                  } catch (e) {
+                    console.error("[v0] Error deleting instancia:", e)
+                  }
                 }
 
                 // Update or insert instancias
@@ -761,38 +765,45 @@ export function CaseForm({ mode, caseId }: CaseFormProps) {
                     hasInstanciaId,
                   })
 
-                  if (hasInstanciaId) {
-                    // Update existing instancia
-                    const { error: updateError } = await supabase
-                      .from("instancias_judiciales")
-                      .update({
-                        numero_causa: instancia.numeroCausa || null,
-                        fiscal: instancia.fiscalFiscalia || null,
-                        fiscalia: instancia.fiscalFiscalia || null,
-                        caratula: instancia.caratula || null,
-                        orden_nivel: instancia.ordenNivel || null,
-                      })
-                      .eq("id", instancia.id)
+                  try {
+                    if (hasInstanciaId) {
+                      // Update existing instancia
+                      const { error: updateError } = await supabase
+                        .from("instancias_judiciales")
+                        .update({
+                          numero_causa: instancia.numeroCausa || null,
+                          fiscal: instancia.fiscalFiscalia || null,
+                          fiscalia: instancia.fiscalFiscalia || null,
+                          caratula: instancia.caratula || null,
+                          orden_nivel: instancia.ordenNivel || null,
+                        })
+                        .eq("id", instancia.id)
 
-                    if (updateError) {
-                      console.log("[v0] Error updating instancia:", updateError)
-                    }
-                  } else {
-                    // Insert new instancia
-                    const { error: insertError } = await supabase.from("instancias_judiciales").insert([
-                      {
-                        imputado_id: accusedId,
-                        numero_causa: instancia.numeroCausa || null,
-                        fiscal: instancia.fiscalFiscalia || null,
-                        fiscalia: instancia.fiscalFiscalia || null,
-                        caratula: instancia.caratula || null,
-                        orden_nivel: instancia.ordenNivel || null,
-                      },
-                    ])
+                      if (updateError) {
+                        console.error("[v0] Error updating instancia:", updateError)
+                        throw updateError
+                      }
+                    } else {
+                      // Insert new instancia
+                      const { error: insertError } = await supabase.from("instancias_judiciales").insert([
+                        {
+                          imputado_id: accusedId,
+                          numero_causa: instancia.numeroCausa || null,
+                          fiscal: instancia.fiscalFiscalia || null,
+                          fiscalia: instancia.fiscalFiscalia || null,
+                          caratula: instancia.caratula || null,
+                          orden_nivel: instancia.ordenNivel || null,
+                        },
+                      ])
 
-                    if (insertError) {
-                      console.log("[v0] Error inserting instancia:", insertError)
+                      if (insertError) {
+                        console.error("[v0] Error inserting instancia:", insertError)
+                        throw insertError
+                      }
                     }
+                  } catch (error) {
+                    console.error("[v0] Error in instancia operation:", error)
+                    // Continue with other instancias instead of failing completely
                   }
                 }
               }
