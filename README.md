@@ -23,19 +23,19 @@ Por defecto, la aplicación está configurada en **modo desarrollo** con autenti
 **Cómo desactivar el modo mock:**
 
 En `components/auth/auth-guard.tsx`, cambia:
-```typescript
+\`\`\`typescript
 const DEV_BYPASS_AUTH = true  // Cambiar a false para usar autenticación real
-```
+\`\`\`
 
 ### Variables de Entorno Requeridas
 
 Para usar autenticación real con Supabase, necesitas configurar las siguientes variables:
 
-```env
+\`\`\`env
 NEXT_PUBLIC_SUPABASE_URL=tu_url_de_supabase
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key
 SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
-```
+\`\`\`
 
 Agrega estas variables en la sección **Vars** del sidebar en v0.app.
 
